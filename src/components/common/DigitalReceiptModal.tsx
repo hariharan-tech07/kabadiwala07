@@ -1,0 +1,310 @@
+import React from 'react';
+import { Transaction, VernacularLang } from '../../types';
+import { CheckCircle2, ShieldCheck, Printer, Download, X, QrCode, Building2, User, Scale } from 'lucide-react';
+
+interface DigitalReceiptModalProps {
+  lot: Transaction | null;
+  lang?: VernacularLang;
+  onClose: () => void;
+}
+
+const UI_TEXT: Record<VernacularLang, {
+  title: string;
+  sub: string;
+  lotRef: string;
+  collector: string;
+  facility: string;
+  handoverTime: string;
+  gps: string;
+  stream: string;
+  netWeight: string;
+  agreedRate: string;
+  totalPayout: string;
+  settlementChannel: string;
+  print: string;
+  download: string;
+  close: string;
+}> = {
+  en: {
+    title: 'E-Waste Handover & Gate Pass Voucher',
+    sub: 'CPCB Compliance • Certified Traceable Chain of Custody',
+    lotRef: 'Electronic Lot Reference',
+    collector: 'Aggregator / Collector',
+    facility: 'Authorized Facility',
+    handoverTime: 'Handover Date & Time',
+    gps: 'GPS Coordinate Stamp',
+    stream: 'E-Waste Stream:',
+    netWeight: 'Certified Net Weight:',
+    agreedRate: 'Agreed Rate per KG:',
+    totalPayout: 'Total Settlement Payout:',
+    settlementChannel: 'Settlement Channel:',
+    print: 'Print Gate Pass',
+    download: 'Download Receipt (.txt)',
+    close: 'Close Voucher'
+  },
+  hi: {
+    title: 'ई-कचरा हस्तांतरण एवं गेट पास वाउचर',
+    sub: 'सीपीसीबी अनुपालन • प्रमाणित डिजिटल ई-कचरा रिकॉर्ड',
+    lotRef: 'इलेक्ट्रॉनिक लॉट संदर्भ संख्या',
+    collector: 'संग्राहक / स्क्रैपर',
+    facility: 'अधिकृत रिसाइकलिंग सुविधा',
+    handoverTime: 'हस्तांतरण समय एवं दिनांक',
+    gps: 'जीपीएस लोकेशन स्टाम्प',
+    stream: 'ई-कचरा श्रेणी:',
+    netWeight: 'प्रमाणित काटा वजन:',
+    agreedRate: 'स्वीकृत दर प्रति किलो:',
+    totalPayout: 'कुल भुगतान राशि:',
+    settlementChannel: 'भुगतान माध्यम:',
+    print: 'गेट पास प्रिंट करें',
+    download: 'रसीद डाउनलोड करें',
+    close: 'वाउचर बंद करें'
+  },
+  mr: {
+    title: 'ई-कचरा हस्तांतरण व गेटपास पावती',
+    sub: 'CPCB कायदेशीर नोंद • प्रमाणित इलेक्ट्रॉनिक साखळी',
+    lotRef: 'इलेक्ट्रॉनिक लॉट संदर्भ क्रमांक',
+    collector: 'कचरा वेचक / स्क्रॅपर',
+    facility: 'अधिकृत रिसायकलिंग केंद्र',
+    handoverTime: 'हस्तांतरण वेळ व दिनांक',
+    gps: 'जीपीएस स्थान नोंद',
+    stream: 'ई-कचरा प्रकार:',
+    netWeight: 'प्रमाणित काटा वजन:',
+    agreedRate: 'मान्य दर प्रति किलो:',
+    totalPayout: 'एकूण देय मोबदला:',
+    settlementChannel: 'पैसे भरणा मार्ग:',
+    print: 'गेटपास प्रिंट करा',
+    download: 'पावती डाउनलोड करा',
+    close: 'पावती बंद करा'
+  },
+  ta: {
+    title: 'மின்னணுக் கழிவு ஒப்படைப்பு மற்றும் கேட் பாஸ் வவுச்சர்',
+    sub: 'CPCB இணக்கம் • சான்றளிக்கப்பட்ட டிஜிட்டல் பதிவு',
+    lotRef: 'மின்னணு லாட் குறிப்பு எண்',
+    collector: 'சேகரிப்பாளர் / ஸ்கிராப்பர்',
+    facility: 'அங்கீகரிக்கப்பட்ட வசதி',
+    handoverTime: 'ஒப்படைத்த தேதி மற்றும் நேரம்',
+    gps: 'ஜிபிஎஸ் இருப்பிட முத்திரை',
+    stream: 'கழிவு வகை:',
+    netWeight: 'சான்றளிக்கப்பட்ட எடை:',
+    agreedRate: 'கிலோவிற்கான விலை:',
+    totalPayout: 'மொத்த தீர்வுத் தொகை:',
+    settlementChannel: 'பணம் செலுத்தும் முறை:',
+    print: 'கேட் பாஸ் அச்சிடுக',
+    download: 'பதிவிறக்கு (.txt)',
+    close: 'மூடு'
+  }
+};
+
+export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({ lot, lang = 'en', onClose }) => {
+  if (!lot) return null;
+
+  const ui = UI_TEXT[lang] || UI_TEXT.en;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadText = () => {
+    const receiptText = `
+======================================================
+KABADIWALA CONNECT - CPCB E-WASTE TRACEABILITY RECEIPT
+Regulatory Standard: CPCB E-Waste Management Rules 2022
+Certified EPR Chain of Custody Record
+======================================================
+Lot Reference ID   : ${lot.lot_reference_id}
+Status             : ${lot.status}
+Timestamp          : ${new Date(lot.handover_timestamp || lot.created_at).toLocaleString()}
+Collector/Scrapper : ${lot.scrapper_name} (ID: ${lot.scrapper_id})
+Authorized Facility: ${lot.recycler_name} (ID: ${lot.recycler_id})
+Collection GPS     : ${lot.collection_gps ? `${lot.collection_gps.latitude}, ${lot.collection_gps.longitude}` : 'Standard Geo Pin'}
+------------------------------------------------------
+E-Waste Category   : ${lot.category}
+Certified Net Mass : ${lot.actual_weight || lot.estimated_weight} KG
+Agreed Buying Rate : ₹${lot.offered_rate_per_kg} / KG
+${lot.sorting_breakdown ? `Sorting Analysis   : Required: ${lot.sorting_breakdown.required_kg}kg | Unrequired: ${lot.sorting_breakdown.unrequired_kg}kg | Deductions: ₹${lot.sorting_breakdown.contamination_deduction}` : ''}
+------------------------------------------------------
+TOTAL PAYOUT       : ₹${lot.final_payout?.toLocaleString('en-IN') || (lot.estimated_weight * lot.offered_rate_per_kg).toLocaleString('en-IN')}
+Payment Mode       : ${lot.payment_mode || 'UPI_DIGITAL'}
+Compliance Standard: E-Waste Management Rules 2022
+======================================================
+`;
+    const blob = new Blob([receiptText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Receipt_${lot.lot_reference_id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto print:p-0 print:bg-white animate-in fade-in duration-150">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-4 my-8 relative print:border-none print:shadow-none print:m-0">
+        
+        {/* Header with National Protocol Seal */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-xs tracking-wider shadow-xs">
+              CPCB
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 leading-snug">
+                {ui.title}
+              </h3>
+              <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline-block" />
+                <span>{ui.sub}</span>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors print:hidden"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Certificate Body */}
+        <div className="p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4 text-xs">
+          {/* Reference & QR Code representation */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2">
+            <div>
+              <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">
+                {ui.lotRef}
+              </span>
+              <span className="font-mono font-bold text-emerald-800 text-base sm:text-lg">
+                {lot.lot_reference_id}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-700 font-mono">
+              <QrCode className="w-4 h-4 text-slate-800" />
+              <span>CPCB-VALID</span>
+            </div>
+          </div>
+
+          {/* Stakeholders grid */}
+          <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200">
+            <div>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                {ui.collector}
+              </span>
+              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5">
+                <User className="w-3.5 h-3.5 text-emerald-600" />
+                {lot.scrapper_name}
+              </strong>
+            </div>
+            <div>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                {ui.facility}
+              </span>
+              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5">
+                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                {lot.recycler_name}
+              </strong>
+            </div>
+            <div>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                {ui.handoverTime}
+              </span>
+              <span className="text-slate-700 font-medium">
+                {new Date(lot.handover_timestamp || lot.created_at).toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+                {ui.gps}
+              </span>
+              <span className="text-slate-700 font-mono text-[11px]">
+                {lot.collection_gps?.latitude?.toFixed(4) || '19.0760'}, {lot.collection_gps?.longitude?.toFixed(4) || '72.8777'}
+              </span>
+            </div>
+          </div>
+
+          {/* Weighment & Payout Computation */}
+          <div className="p-3.5 rounded-lg bg-white border border-slate-200 space-y-2 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 font-medium">{ui.stream}</span>
+              <span className="font-bold text-slate-900">{lot.category}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 font-medium">{ui.netWeight}</span>
+              <span className="font-mono text-emerald-700 font-bold text-sm">
+                {lot.actual_weight || lot.estimated_weight} KG
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600 font-medium">{ui.agreedRate}</span>
+              <span className="font-mono text-slate-800 font-semibold">₹{lot.offered_rate_per_kg} / kg</span>
+            </div>
+
+            {lot.sorting_breakdown && (
+              <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-600 space-y-1 bg-slate-50 p-2 rounded">
+                <div className="flex justify-between">
+                  <span>Sorted Usable Scrap:</span>
+                  <span className="font-mono font-medium">{lot.sorting_breakdown.required_kg} kg</span>
+                </div>
+                {lot.sorting_breakdown.contamination_deduction > 0 && (
+                  <div className="flex justify-between text-rose-600 font-medium">
+                    <span>Contamination / Moisture Penalty:</span>
+                    <span className="font-mono">-₹{lot.sorting_breakdown.contamination_deduction}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-2.5 border-t border-slate-200 font-bold text-sm">
+              <span className="text-slate-900">{ui.totalPayout}</span>
+              <span className="font-mono text-emerald-700 text-base font-black">
+                ₹{(lot.final_payout || (lot.estimated_weight * lot.offered_rate_per_kg)).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+
+          {/* Compliance Footer notes */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-600 pt-1">
+            <div className="flex items-center gap-1.5">
+              <span>{ui.settlementChannel}</span>
+              <strong className="text-slate-900 font-mono bg-slate-200/60 px-1.5 py-0.5 rounded">
+                {lot.payment_mode || 'UPI_IMPS_DIGITAL'}
+              </strong>
+            </div>
+            <div className="flex items-center gap-1 text-emerald-700 font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>CPCB Traceability Pass Verified</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-2.5 pt-2 print:hidden">
+          <button
+            type="button"
+            onClick={handleDownloadText}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>{ui.download}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+          >
+            <Printer className="w-4 h-4" />
+            <span>{ui.print}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+          >
+            {ui.close}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

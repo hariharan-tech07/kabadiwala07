@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Connection testing endpoint for boot verification
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
+    // Materials Collection (Read available to all viewers for fair CPCB transparency)
+    match /materials/{materialId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isValidId(userId);
+      allow delete: if isSignedIn();
+    }
+
+    // Recyclers Facility Collection
+    match /recyclers/{recyclerId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Transactions & Scrap Lots Collection
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow create, update: if isValidId(transactionId);
+      allow delete: if isSignedIn();
+    }
+
+    // Realtime Negotiation Chats Collection
+    match /chats/{chatId} {
+      allow read: if true;
+      allow create, update: if isValidId(chatId);
+      allow delete: if isSignedIn();
+    }
+
+    // Grievance Redressal & Complaints
+    match /complaints/{complaintId} {
+      allow read: if true;
+      allow create, update: if isValidId(complaintId);
+      allow delete: if false;
+    }
+
+    // Legal Cases
+    match /legal_cases/{caseId} {
+      allow read: if true;
+      allow create, update: if isValidId(caseId);
+      allow delete: if isSignedIn();
+    }
+
+    // Default catch-all for any other path
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Kabadiwala Connect - E-Waste Circular Network",
+  "description": "Decoupled full-stack platform bridging informal scrap collectors with authorized recyclers via AI material identification, dynamic pricing, geolocation matching, and traceability.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

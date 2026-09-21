@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for Scrappers, Recyclers, and Admins in Kabadiwala Connect",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["scrapper", "recycler", "admin"] },
+        "phone": { "type": "string", "maxLength": 32 },
+        "location": { "type": "string", "maxLength": 256 },
+        "verified": { "type": "boolean" },
+        "cpcb_number": { "type": "string", "maxLength": 128 },
+        "aadhaar_last4": { "type": "string", "maxLength": 4 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Pending Admin Verification", "Suspended"] },
+        "created_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "username", "name", "role"]
+    },
+    "Material": {
+      "title": "Material",
+      "description": "Statutory e-waste category with CPCB benchmark rates and hazard rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 128 },
+        "subcategory": { "type": "string", "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "image_url": { "type": "string", "maxLength": 512 },
+        "base_rate_per_kg": { "type": "number" },
+        "danger_level": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] }
+      },
+      "required": ["id", "category", "base_rate_per_kg", "danger_level"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "E-waste lot broadcast, weight verification, and custody transfer record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "lot_reference_id": { "type": "string", "maxLength": 64 },
+        "scrapper_id": { "type": "string", "maxLength": 128 },
+        "scrapper_name": { "type": "string", "maxLength": 128 },
+        "recycler_id": { "type": "string", "maxLength": 128 },
+        "recycler_name": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 128 },
+        "estimated_weight": { "type": "number" },
+        "declared_weight": { "type": "number" },
+        "actual_weight": { "type": "number" },
+        "verified_weight": { "type": "number" },
+        "offered_rate_per_kg": { "type": "number" },
+        "final_payout": { "type": "number" },
+        "status": { "type": "string", "enum": ["OFFERED", "ACCEPTED", "PICKUP_SCHEDULED", "COLLECTED", "WEIGHT_VERIFIED", "PAID", "COMPLETED", "DISPUTED"] },
+        "payment_mode": { "type": "string", "enum": ["UPI", "UPI_DIGITAL", "CASH_ON_PICKUP", "CASH_ON_DELIVERY", "OFFLINE_PAYMENT", "CASH", "BANK_TRANSFER"] },
+        "fulfillment_type": { "type": "string", "enum": ["PICKUP", "DELIVERY"] },
+        "payment_status": { "type": "string", "enum": ["PENDING", "PROCESSING", "PAID", "DISPUTED", "FAILED"] },
+        "payment_details": { "type": "object" },
+        "scraps_items": { "type": "array" },
+        "created_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "lot_reference_id", "scrapper_id", "category", "status", "created_at"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Direct negotiation chat message between scrapper and recycler",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "lot_reference_id": { "type": "string", "maxLength": 64 },
+        "sender_id": { "type": "string", "maxLength": 128 },
+        "sender_name": { "type": "string", "maxLength": 128 },
+        "sender_role": { "type": "string", "enum": ["scrapper", "recycler", "admin"] },
+        "receiver_id": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "sender_id", "receiver_id", "message", "timestamp"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "Statutory grievance or under-weighing dispute filed with CPCB desk",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "complainant_id": { "type": "string", "maxLength": 128 },
+        "complainant_name": { "type": "string", "maxLength": 128 },
+        "complainant_role": { "type": "string", "enum": ["scrapper", "recycler"] },
+        "respondent_id": { "type": "string", "maxLength": 128 },
+        "respondent_name": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["Submitted", "Under Review", "Action Taken", "Escalated", "Resolved"] },
+        "created_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "complainant_id", "respondent_id", "type", "description", "status", "created_at"]
+    },
+    "RecyclerFacility": {
+      "title": "RecyclerFacility",
+      "description": "Authorized e-waste recycling processing plant or registered aggregator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "user_id": { "type": "string", "maxLength": 128 },
+        "facility_name": { "type": "string", "maxLength": 256 },
+        "cpcb_auth_number": { "type": "string", "maxLength": 128 },
+        "is_authorized": { "type": "boolean" },
+        "service_radius_km": { "type": "number" },
+        "pickup_available": { "type": "boolean" },
+        "contact_phone": { "type": "string", "maxLength": 32 },
+        "address": { "type": "string", "maxLength": 256 }
+      },
+      "required": ["id", "facility_name", "is_authorized"]
+    }
+  },
+  "firestore": {
+    "/materials/{materialId}": {
+      "schema": "Material",
+      "description": "Collection of benchmark e-waste materials with CPCB price standards"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of registered scrappers, recyclers, and administration users"
+    },
+    "/recyclers/{recyclerId}": {
+      "schema": "RecyclerFacility",
+      "description": "Collection of authorized recycler facilities with geo coordinates and rates"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Collection of scrap lots, gate passes, and verified transactions"
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "Direct chat communication stream for doorstep negotiations"
+    },
+    "/complaints/{complaintId}": {
+      "schema": "Complaint",
+      "description": "Grievance redressal cases and fraud arbitration logs"
+    }
+  }
+}
