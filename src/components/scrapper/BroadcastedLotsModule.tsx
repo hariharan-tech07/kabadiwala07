@@ -182,7 +182,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="bg-white p-5 sm:p-7 rounded-2xl border-2 border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-3.5 sm:p-7 rounded-2xl border-2 border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">
@@ -203,7 +203,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
             type="button"
             id="download-monthly-pdf-btn"
             onClick={onDownloadMonthlyStatement}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
           >
             <Download className="w-4 h-4 text-emerald-400" />
             <span>{ui.monthlyStatement}</span>
@@ -213,7 +213,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
 
       {/* Lots Content List */}
       {lots.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-slate-200 p-12 text-center space-y-4">
+        <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 sm:p-12 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
             <FileCheck className="w-8 h-8" />
           </div>
@@ -239,7 +239,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
             return (
               <div
                 key={lot.id}
-                className={`bg-white rounded-2xl border-2 p-5 sm:p-6 shadow-xs transition-all ${
+                className={`bg-white rounded-2xl border-2 p-3.5 sm:p-6 shadow-xs transition-all ${
                   isAwaitingVerification
                     ? 'border-amber-400 bg-amber-50/30'
                     : 'border-slate-200 hover:border-slate-300'
@@ -299,7 +299,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
                   </div>
 
                   {/* Right Actions & Payout */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:text-right shrink-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between lg:justify-end gap-3 lg:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                     <div>
                       <span className="text-xs font-bold text-slate-500 block">{ui.totalPayout}</span>
                       <span className="text-lg sm:text-xl font-black text-emerald-800 font-mono">
@@ -307,7 +307,7 @@ export const BroadcastedLotsModule: React.FC<BroadcastedLotsModuleProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isAwaitingVerification && (
                         <>
                           <button

@@ -3,13 +3,21 @@ import { User, VernacularLang } from '../types';
 import { translations } from '../translations';
 import { notifyUser } from './common/NotificationToast';
 import {
+  playChatMessageSound,
+  playTransactionAssignedSound,
+  isAudioFeedbackEnabled,
+  toggleAudioFeedback,
+  subscribeAudioFeedback
+} from '../utils/soundEffects';
+import {
   ShieldCheck, MapPin, LogOut, Globe, CheckCircle2,
   User as UserIcon, Building2, ShieldAlert, Compass, Bell,
   UserPlus, Scale, Sparkles, X,
   Headphones, Camera, MessageSquare, FileText, TrendingUp,
-  Sliders, Clock, Gavel, FileSpreadsheet, Users, ChevronLeft, ChevronRight,
-  ChevronDown, Check, Layers, Database
+  Sliders, Clock, Gavel, FileSpreadsheet, Users,
+  ChevronDown, Check, Layers, Database, Volume2, VolumeX, Menu, Smartphone
 } from 'lucide-react';
+import { PWAInstallButton } from './common/PWAInstallButton';
 
 export interface NavModuleItem {
   id: string;
@@ -48,10 +56,17 @@ export const Header: React.FC<HeaderProps> = ({
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const [isModulesMenuOpen, setIsModulesMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isCornerMenuOpen, setIsCornerMenuOpen] = useState(false);
+  const [audioFeedbackOn, setAudioFeedbackOn] = useState(() => isAudioFeedbackEnabled());
+
+  useEffect(() => {
+    return subscribeAudioFeedback((enabled) => setAudioFeedbackOn(enabled));
+  }, []);
 
   const notifMenuRef = useRef<HTMLDivElement>(null);
   const modulesMenuRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  const cornerMenuRef = useRef<HTMLDivElement>(null);
 
   const LANGUAGES: Array<{ code: VernacularLang; label: string; native: string }> = [
     { code: 'en', label: 'English', native: 'English' },
@@ -258,18 +273,6 @@ export const Header: React.FC<HeaderProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePrevTab = () => {
-    if (currentIndex > 0) {
-      handleTabClick(navModules[currentIndex - 1].id);
-    }
-  };
-
-  const handleNextTab = () => {
-    if (currentIndex < navModules.length - 1) {
-      handleTabClick(navModules[currentIndex + 1].id);
-    }
-  };
-
   // Role themed accent classes
   const getRoleAccent = () => {
     switch (user.role) {
@@ -310,6 +313,9 @@ export const Header: React.FC<HeaderProps> = ({
       }
       if (langMenuRef.current && !langMenuRef.current.contains(target)) {
         setIsLangMenuOpen(false);
+      }
+      if (cornerMenuRef.current && !cornerMenuRef.current.contains(target)) {
+        setIsCornerMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -368,6 +374,48 @@ export const Header: React.FC<HeaderProps> = ({
     });
   };
 
+  const triggerTestChatAudioAlert = () => {
+    setIsNotifMenuOpen(false);
+    playChatMessageSound();
+    notifyUser({
+      title: lang === 'hi' ? 'रमेश कुमार से नया चैट संदेश' : lang === 'mr' ? 'रमेश कुमार कडून नवीन चॅट संदेश' : lang === 'ta' ? 'ரமேஷ் குமாரிடமிருந்து புதிய அரட்டை செய்தி' : 'New Message from Ramesh Kumar',
+      message: lang === 'hi' 
+        ? 'प्रमाणित काटा वजन 48 किग्रा स्वीकृत। क्या आप 30 मिनट में आ सकते हैं?' 
+        : lang === 'mr' 
+        ? 'काटा वजन 48 किलो मंजूर. तुम्ही 30 मिनिटांत येऊ शकता का?' 
+        : lang === 'ta' 
+        ? 'எடை 48 கிலோ உறுதிசெய்யப்பட்டது. 30 நிமிடங்களில் வர முடியுமா?' 
+        : 'Bench scale weighment 48 kg confirmed. Ready for pickup within 30 minutes?',
+      type: 'chat',
+      actionLabel: lang === 'hi' ? 'चैट खोलें' : lang === 'mr' ? 'चॅट उघडा' : lang === 'ta' ? 'அரட்டையை திற' : 'Open Chat',
+      onAction: () => {
+        const chatBtn = document.getElementById('quick-chat-nav-btn') || document.querySelector('[data-module-id="chat"]');
+        if (chatBtn) (chatBtn as HTMLElement).click();
+      }
+    });
+  };
+
+  const triggerTestTransactionAssignedAlert = () => {
+    setIsNotifMenuOpen(false);
+    playTransactionAssignedSound();
+    notifyUser({
+      title: lang === 'hi' ? 'नया लेनदेन अनुरोध असाइन हुआ' : lang === 'mr' ? 'नवीन व्यवहार विनंती सोपवली' : lang === 'ta' ? 'புதிய பரிவர்த்தனை கோரிக்கை ஒதுக்கப்பட்டது' : 'New Transaction Request Assigned',
+      message: lang === 'hi'
+        ? 'कबाड़ीवाला ने पीन्या रिसाइकलिंग सुविधा को नया ई-कचरा लॉट (52 किग्रा) असाइन किया।'
+        : lang === 'mr'
+        ? 'स्क्रॅपरने तुमच्या अधिकृत सुविधेला 52 किलो ई-कचरा लॉट सोपवला आहे.'
+        : lang === 'ta'
+        ? 'ஸ்கிராப்பர் உங்கள் மறுசுழற்சி ஆலைக்கு புதிய 52 கிலோ மின்-கழிவு லாட்டை ஒதுக்கியுள்ளார்.'
+        : 'Ramesh Kumar assigned a new PCB Scrap Lot (52 kg) to your authorized recycling facility.',
+      type: 'assignment',
+      actionLabel: lang === 'hi' ? 'लॉट देखें' : lang === 'mr' ? 'लॉट पहा' : lang === 'ta' ? 'லாட்டை பார்' : 'Inspect Lot',
+      onAction: () => {
+        const lotsBtn = document.querySelector('[data-module-id="lots"]');
+        if (lotsBtn) (lotsBtn as HTMLElement).click();
+      }
+    });
+  };
+
   const getRoleBadge = () => {
     switch (user.role) {
       case 'scrapper':
@@ -395,113 +443,94 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
+    <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-40 shadow-xs w-full">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4 w-full min-w-0">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-slate-900 font-extrabold text-sm shadow-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink min-w-0">
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-900 font-extrabold text-xs sm:text-sm shadow-xs shrink-0 ${
+              user.role === 'scrapper' ? 'bg-emerald-500' : user.role === 'recycler' ? 'bg-blue-500 text-white' : 'bg-amber-500'
+            }`}>
               KC
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base sm:text-lg text-slate-900 tracking-tight">{t.appName}</span>
-                <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded border border-emerald-200">
-                  {t.liveStatus}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-bold text-xs sm:text-base md:text-lg text-slate-900 tracking-tight truncate max-w-[85px] xs:max-w-[120px] sm:max-w-none">
+                  {t.appName}
                 </span>
+                {user.role === 'scrapper' ? (
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase rounded-full border border-emerald-300">
+                    <Smartphone className="w-2.5 h-2.5" />
+                    <span>Android App</span>
+                  </span>
+                ) : user.role === 'recycler' ? (
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-full border border-blue-300">
+                    <Globe className="w-2.5 h-2.5" />
+                    <span>Web Portal</span>
+                  </span>
+                ) : (
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-black uppercase rounded-full border border-amber-300">
+                    <Building2 className="w-2.5 h-2.5" />
+                    <span>Web Desk</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 hidden xl:block">
-                {t.appTagline}
+                {user.role === 'scrapper'
+                  ? 'Kabadiwala Collector Android App • Camera AI Scale & Offline Sync'
+                  : user.role === 'recycler'
+                  ? 'Authorized Recycler Web Portal • Desktop Cloud Workspace'
+                  : 'CPCB Central Regulatory Authority Web Portal • Statutory Directorate'}
               </p>
             </div>
           </div>
 
-          {/* OPERATIONS WORKFLOW DROPDOWN IN NAV BAR */}
+          {/* OPERATIONS WORKFLOW MENU IN NAV BAR — DESKTOP ONLY */}
           {navModules.length > 0 && (
-            <div className="relative flex items-center gap-1 shrink-0" ref={modulesMenuRef}>
-              <div className="flex items-center bg-slate-100 hover:bg-slate-200/80 p-0.5 rounded-xl border border-slate-200 transition-colors">
-                <button
-                  type="button"
-                  id="navbar-modules-dropdown-btn"
-                  onClick={() => {
-                    setIsModulesMenuOpen(!isModulesMenuOpen);
-                    setIsLangMenuOpen(false);
-                    setIsNotifMenuOpen(false);
-                  }}
-                  className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    isModulesMenuOpen
-                      ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-700'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 shadow-2xs border border-slate-200/80'
-                  }`}
-                  aria-expanded={isModulesMenuOpen}
-                  aria-haspopup="true"
-                  title="Open Operations Workflow Menu"
-                >
-                  <span
-                    className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 ${
-                      isModulesMenuOpen
-                        ? 'bg-emerald-500 text-slate-950 font-black'
-                        : accent.badge
-                    }`}
-                  >
-                    {currentMod.num}
+            <div className="relative hidden md:flex items-center gap-1 shrink min-w-0" ref={modulesMenuRef}>
+              <button
+                type="button"
+                id="navbar-modules-dropdown-btn"
+                onClick={() => {
+                  setIsModulesMenuOpen(!isModulesMenuOpen);
+                  setIsLangMenuOpen(false);
+                  setIsNotifMenuOpen(false);
+                  setIsCornerMenuOpen(false);
+                }}
+                className={`flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px] ${
+                  isModulesMenuOpen
+                    ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-700'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 shadow-2xs border border-slate-200'
+                }`}
+                aria-expanded={isModulesMenuOpen}
+                aria-haspopup="true"
+                title="View All Operations Modules"
+              >
+                {currentMod.icon ? (
+                  <currentMod.icon className={`w-4 h-4 shrink-0 ${isModulesMenuOpen ? 'text-emerald-400' : accent.iconColor}`} />
+                ) : (
+                  <Layers className={`w-4 h-4 shrink-0 ${isModulesMenuOpen ? 'text-emerald-400' : 'text-slate-600'}`} />
+                )}
+
+                <div className="flex flex-col text-left leading-none min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-slate-400">
+                    {user.role.toUpperCase()} • {t.operationsMenuBar || 'Workflow'}
                   </span>
-
-                  {currentMod.icon && (
-                    <currentMod.icon
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        isModulesMenuOpen ? 'text-emerald-400' : accent.iconColor
-                      }`}
-                    />
-                  )}
-
-                  <div className="flex flex-col text-left leading-none">
-                    <span className="text-[9px] uppercase font-bold text-slate-400">
-                      {t.operationsMenuBar || 'Workflow'}
-                    </span>
-                    <span className="font-extrabold text-xs max-w-[100px] sm:max-w-[160px] md:max-w-[210px] truncate">
-                      {currentMod.shortTitle}
-                    </span>
-                  </div>
-
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
-                      isModulesMenuOpen ? 'rotate-180 text-white' : ''
-                    }`}
-                  />
-                </button>
-
-                {/* Quick Prev & Next step buttons */}
-                <div className="hidden md:flex items-center gap-0.5 pl-1 pr-0.5">
-                  <button
-                    type="button"
-                    id="navbar-prev-module-btn"
-                    onClick={handlePrevTab}
-                    disabled={currentIndex <= 0}
-                    className="p-1 rounded hover:bg-white text-slate-500 hover:text-slate-900 disabled:opacity-25 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="Previous Module"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[10px] font-mono font-bold text-slate-400 px-0.5">
-                    {currentIndex + 1}/{navModules.length}
+                  <span className="font-extrabold text-xs max-w-[100px] xs:max-w-[140px] sm:max-w-[200px] truncate text-slate-900 group-hover:text-black">
+                    {currentMod.shortTitle}
                   </span>
-                  <button
-                    type="button"
-                    id="navbar-next-module-btn"
-                    onClick={handleNextTab}
-                    disabled={currentIndex >= navModules.length - 1}
-                    className="p-1 rounded hover:bg-white text-slate-500 hover:text-slate-900 disabled:opacity-25 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    title="Next Module"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
-              </div>
+
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isModulesMenuOpen ? 'rotate-180 text-white' : ''
+                  }`}
+                />
+              </button>
 
               {/* Modules Dropdown Menu Card */}
               {isModulesMenuOpen && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:left-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-96 max-h-[82vh] overflow-y-auto rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between px-2.5 py-2 border-b border-slate-100 mb-2">
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-emerald-600" />
@@ -580,9 +609,9 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Right Section: Language Dropdown, Notifications, GPS, Profile & Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* VERNACULAR LANGUAGE SELECTOR AS A DROPDOWN */}
-            <div className="relative" ref={langMenuRef}>
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
+            {/* VERNACULAR LANGUAGE SELECTOR AS A DROPDOWN - Desktop View */}
+            <div className="relative hidden md:block" ref={langMenuRef}>
               <button
                 type="button"
                 id="header-lang-dropdown-btn"
@@ -590,8 +619,9 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsLangMenuOpen(!isLangMenuOpen);
                   setIsModulesMenuOpen(false);
                   setIsNotifMenuOpen(false);
+                  setIsCornerMenuOpen(false);
                 }}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-2xs min-h-[34px] sm:min-h-[38px] ${
                   isLangMenuOpen
                     ? 'bg-slate-900 text-white border-slate-900 ring-1 ring-slate-700'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -601,8 +631,11 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Select Language / भाषा चुनें"
               >
                 <Globe className={`w-3.5 h-3.5 shrink-0 ${isLangMenuOpen ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                <span className="font-extrabold text-xs">
+                <span className="font-extrabold text-xs hidden xs:inline">
                   {LANGUAGES.find(l => l.code === lang)?.native || 'English'}
+                </span>
+                <span className="font-extrabold text-[11px] uppercase xs:hidden">
+                  {lang}
                 </span>
                 <ChevronDown
                   className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${
@@ -612,7 +645,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {isLangMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-white border border-slate-200 shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-48 rounded-xl bg-white border border-slate-200 shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
                     Select Language / भाषा
                   </div>
@@ -654,8 +687,9 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsNotifMenuOpen(!isNotifMenuOpen);
                   setIsModulesMenuOpen(false);
                   setIsLangMenuOpen(false);
+                  setIsCornerMenuOpen(false);
                 }}
-                className="relative p-2 rounded-lg text-slate-600 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="relative p-1.5 sm:p-2 rounded-lg text-slate-600 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all cursor-pointer shadow-2xs active:scale-95 min-h-[34px] sm:min-h-[38px] flex items-center justify-center"
                 title="Local Notification Center & Live Alerts"
               >
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse" />
@@ -663,7 +697,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {isNotifMenuOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-4 z-50 text-slate-900 animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-80 max-h-[82vh] overflow-y-auto rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-4 z-50 text-slate-900 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-emerald-600" />
@@ -683,24 +717,93 @@ export const Header: React.FC<HeaderProps> = ({
                       ? 'व्यवहारातील स्थिती बदल आणि नवीन जोडणी विनंत्या आल्यावर थेट वर सूचना दिसेल.'
                       : lang === 'ta'
                       ? 'செயலில் உள்ள பரிவர்த்தனை மாற்றங்கள் மற்றும் புதிய இணைப்பு கோரிக்கைகளுக்கு மேல் பகுதியில் எச்சரிக்கை தோன்றும்.'
-                      : 'Alerts appear automatically at the top of the screen when transactions change status or new connection requests arrive.'}
+                      : 'Alerts appear automatically at the top of the screen when transactions change status, new chats arrive, or lots are assigned.'}
                   </p>
+
+                  {/* Audio Feedback System Controls */}
+                  <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {audioFeedbackOn ? (
+                          <Volume2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <VolumeX className="w-4 h-4 text-slate-400" />
+                        )}
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">
+                            {lang === 'hi' ? 'ऑडियो फ़ीडबैक' : lang === 'mr' ? 'ऑडिओ अभिप्राय' : lang === 'ta' ? 'ஒலி கருத்து' : 'Audio Feedback'}
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            {audioFeedbackOn
+                              ? (lang === 'hi' ? 'सक्रिय (ध्वनि चालू)' : lang === 'mr' ? 'सक्रिय (आवाज सुरू)' : lang === 'ta' ? 'செயலில் உள்ளது' : 'Active (Chimes Enabled)')
+                              : (lang === 'hi' ? 'मूक (ध्वनि बंद)' : lang === 'mr' ? 'मूक (आवाज बंद)' : lang === 'ta' ? 'முடக்கப்பட்டது' : 'Muted')}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        id="header-audio-feedback-toggle"
+                        onClick={() => {
+                          const next = toggleAudioFeedback();
+                          setAudioFeedbackOn(next);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                          audioFeedbackOn
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        }`}
+                      >
+                        {audioFeedbackOn ? 'Mute' : 'Enable'}
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      {lang === 'hi' ? 'लाइव अलर्ट परीक्षण' : lang === 'mr' ? 'थेट सूचना चाचणी' : lang === 'ta' ? 'அறிவிப்பு சோதனை' : 'Test Live Notifications'}
+                      {lang === 'hi' ? 'ऑडियो एवं लाइव अलर्ट परीक्षण' : lang === 'mr' ? 'ऑडिओ व थेट सूचना चाचणी' : lang === 'ta' ? 'ஒலி மற்றும் எச்சரிக்கை சோதனை' : 'Test Audio Feedback & Alerts'}
                     </span>
+
+                    {/* Chat Audio Alert Test */}
+                    <button
+                      type="button"
+                      id="test-chat-audio-btn"
+                      onClick={triggerTestChatAudioAlert}
+                      className="w-full px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                      title="Plays the gentle sinusoidal chime for incoming chat messages"
+                    >
+                      <span className="flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{lang === 'hi' ? 'चैट संदेश ऑडियो टेस्ट' : lang === 'mr' ? 'चॅट संदेश ऑडिओ चाचणी' : lang === 'ta' ? 'அரட்டை செய்தி ஒலி' : 'Test Chat Message Sound'}</span>
+                      </span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                    </button>
+
+                    {/* Recycler Transaction Assigned Alert Test */}
+                    <button
+                      type="button"
+                      id="test-tx-assigned-audio-btn"
+                      onClick={triggerTestTransactionAssignedAlert}
+                      className="w-full px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                      title="Plays the distinctive ascending harmonic chime when a new transaction request is assigned to a recycler"
+                    >
+                      <span className="flex items-center gap-2">
+                        <UserPlus className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{lang === 'hi' ? 'लॉट असाइन ऑडियो टेस्ट' : lang === 'mr' ? 'लॉट वाटप ऑडिओ चाचणी' : lang === 'ta' ? 'லாட் ஒதுக்கீடு ஒலி' : 'Test Transaction Assigned Sound'}</span>
+                      </span>
+                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                    </button>
+
                     <button
                       type="button"
                       id="test-connection-notif-btn"
                       onClick={triggerTestConnectionAlert}
-                      className="w-full px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <UserPlus className="w-3.5 h-3.5 text-blue-600" />
+                        <UserPlus className="w-3.5 h-3.5 text-slate-600" />
                         <span>{lang === 'hi' ? 'कनेक्शन अनुरोध अलर्ट' : lang === 'mr' ? 'जोडणी विनंती सूचना' : lang === 'ta' ? 'இணைப்பு கோரிக்கை' : 'Connection Request Alert'}</span>
                       </span>
-                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                      <Sparkles className="w-3.5 h-3.5 text-slate-400" />
                     </button>
 
                     <button
@@ -742,16 +845,33 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 id="header-gps-map-btn"
                 onClick={onOpenMap}
-                className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 border border-blue-300 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="hidden md:inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 border border-blue-300 transition-all cursor-pointer shadow-xs active:scale-95 min-h-[34px] sm:min-h-[38px]"
                 title="Open Fullscreen GPS Geolocation Radar"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                 </span>
-                <Compass className="w-4 h-4 text-blue-700" />
-                <span>GPS</span>
+                <Compass className="w-3.5 h-3.5 text-blue-700" />
+                <span className="hidden sm:inline">GPS</span>
               </button>
+            )}
+
+            {/* Platform Role Indicator / Android App Install Action (Visible on sm+ screens; on mobile it is conveniently accessible inside the Corner Menu) */}
+            {user.role === 'scrapper' ? (
+              <div className="hidden sm:block">
+                <PWAInstallButton />
+              </div>
+            ) : user.role === 'recycler' ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs" title="Enterprise Cloud Web Application">
+                <Globe className="w-3.5 h-3.5 text-blue-600" />
+                <span>Web Portal</span>
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs" title="Government Regulatory Web Application">
+                <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                <span>Web Desk</span>
+              </span>
             )}
 
             <div className="hidden lg:block">{getRoleBadge()}</div>
@@ -760,12 +880,251 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               id="header-logout-btn"
               onClick={onLogout}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer shadow-2xs"
+              className="hidden md:inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer shadow-2xs min-h-[34px] sm:min-h-[38px]"
               title="Logout from active session"
             >
               <LogOut className="w-4 h-4 text-rose-600" />
               <span className="hidden sm:inline">{t.logout}</span>
             </button>
+
+            {/* MOBILE CORNER MENU DROPDOWN BOX (Placed in the top-right corner of the screen) */}
+            <div className="relative md:hidden" ref={cornerMenuRef}>
+              <button
+                type="button"
+                id="header-mobile-corner-menu-btn"
+                onClick={() => {
+                  setIsCornerMenuOpen(!isCornerMenuOpen);
+                  setIsNotifMenuOpen(false);
+                  setIsLangMenuOpen(false);
+                  setIsModulesMenuOpen(false);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[36px] shadow-xs active:scale-95 ${
+                  isCornerMenuOpen
+                    ? 'bg-slate-900 text-white ring-2 ring-emerald-500 shadow-md'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white'
+                }`}
+                aria-expanded={isCornerMenuOpen}
+                aria-haspopup="true"
+                title="Open Corner Dashboard Menu"
+              >
+                {isCornerMenuOpen ? (
+                  <X className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Menu className="w-4 h-4 text-emerald-400" />
+                )}
+                <span className="font-extrabold tracking-tight">Menu</span>
+                <span className={`w-2 h-2 rounded-full ${isCornerMenuOpen ? 'bg-emerald-400' : 'bg-emerald-400 animate-pulse'}`} />
+              </button>
+
+              {/* The Corner Dropdown Box */}
+              {isCornerMenuOpen && (
+                <div
+                  id="mobile-corner-dropdown-box"
+                  className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-88 max-h-[85vh] overflow-y-auto rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  {/* Top Profile / Role Strip */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-black flex items-center justify-center text-xs shrink-0 shadow-xs">
+                        KC
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-xs text-slate-900 truncate">
+                          {user.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {user.phone || user.id}
+                        </div>
+                      </div>
+                    </div>
+                    <div>{getRoleBadge()}</div>
+                  </div>
+
+                  {/* OPERATIONS WORKFLOW SECTION */}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                        {t.operationsMenuBar || 'Workflow Modules'}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-slate-400">
+                        {currentIndex + 1} of {navModules.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 max-h-[260px] overflow-y-auto pr-0.5">
+                      {navModules.map((mod) => {
+                        const isActive = currentTab === mod.id;
+                        const Icon = mod.icon;
+                        return (
+                          <button
+                            key={mod.id}
+                            type="button"
+                            id={`corner-opt-mod-${mod.id}`}
+                            onClick={() => {
+                              handleTabClick(mod.id);
+                              setIsCornerMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                              isActive
+                                ? accent.activeBg
+                                : 'bg-white hover:bg-slate-50 border-slate-100 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                  isActive ? accent.pillBg : 'bg-slate-100 text-slate-700 font-bold'
+                                }`}
+                              >
+                                {mod.num}
+                              </span>
+                              <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? accent.iconColor : 'text-slate-400'}`} />
+                              <span className="font-extrabold text-xs truncate text-slate-900">
+                                {mod.shortTitle}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                              {mod.badge && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  {mod.badge}
+                                </span>
+                              )}
+                              {isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* VERNACULAR LANGUAGE SELECTOR */}
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5 px-1 mb-2">
+                      <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                      Language / भाषा
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {LANGUAGES.map((l) => {
+                        const isSelected = lang === l.code;
+                        return (
+                          <button
+                            key={l.code}
+                            type="button"
+                            id={`corner-lang-opt-${l.code}`}
+                            onClick={() => {
+                              onLangChange(l.code);
+                            }}
+                            className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-all cursor-pointer border ${
+                              isSelected
+                                ? 'bg-emerald-50 text-emerald-900 font-bold border-emerald-300 shadow-2xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 font-medium'
+                            }`}
+                          >
+                            <div className="flex flex-col text-left leading-tight">
+                              <span className="font-bold text-slate-900">{l.native}</span>
+                              <span className="text-[10px] text-slate-400">{l.label}</span>
+                            </div>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* QUICK TOOLS (GPS RADAR & AUDIO FEEDBACK) */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    {/* Android App Install in Corner Dropdown (Exclusively for Scrapper) */}
+                    {user.role === 'scrapper' ? (
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="w-4 h-4 text-emerald-700" />
+                          <div>
+                            <div className="text-xs font-bold text-emerald-950">Android App</div>
+                            <div className="text-[10px] text-emerald-700">1-Tap Install & WebAPK</div>
+                          </div>
+                        </div>
+                        <PWAInstallButton variant="mobile" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-slate-700" />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900">
+                              {user.role === 'recycler' ? 'Recycler Web Portal' : 'CPCB Regulatory Web Desk'}
+                            </div>
+                            <div className="text-[10px] text-slate-500">Cloud Web Application</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                          Web Page
+                        </span>
+                      </div>
+                    )}
+                    {onOpenMap && (
+                      <button
+                        type="button"
+                        id="corner-gps-radar-btn"
+                        onClick={() => {
+                          setIsCornerMenuOpen(false);
+                          onOpenMap();
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Compass className="w-4 h-4 text-blue-600" />
+                          <span>Open GPS Geolocation Radar</span>
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      </button>
+                    )}
+
+                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
+                      <div className="flex items-center gap-2">
+                        {audioFeedbackOn ? (
+                          <Volume2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <VolumeX className="w-4 h-4 text-slate-400" />
+                        )}
+                        <span className="text-xs font-bold text-slate-700">Audio Chimes</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = toggleAudioFeedback();
+                          setAudioFeedbackOn(next);
+                        }}
+                        className={`px-2 py-0.5 rounded-lg text-[11px] font-bold cursor-pointer ${
+                          audioFeedbackOn
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {audioFeedbackOn ? 'Active' : 'Muted'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* LOGOUT BUTTON */}
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      id="corner-logout-btn"
+                      onClick={() => {
+                        setIsCornerMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer active:scale-95"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-600" />
+                      <span>{t.logout}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

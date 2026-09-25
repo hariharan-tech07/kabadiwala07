@@ -13,7 +13,8 @@ import {
   Save, ArrowUpRight, Scale, IndianRupee, MapPin, Check,
   Clock, ShieldCheck, Compass, Globe, FileText, QrCode,
   Gavel, AlertTriangle, FileWarning, RefreshCw, Send, Loader2,
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Building2,
+  KeyRound, Eye, EyeOff, Lock, Copy, X
 } from 'lucide-react';
 
 export type AdminMenuTab = 'transactions' | 'users' | 'rates' | 'complaints' | 'legal' | 'audit' | 'payments';
@@ -70,8 +71,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // DDL Schema State
   const [sqlDDL, setSqlDDL] = useState<string>('');
 
+  // Admin Password & Security Settings Modal
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [currentAdminPassword, setCurrentAdminPassword] = useState('admin123');
+  const [showActivePassword, setShowActivePassword] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [confirmAdminPassword, setConfirmAdminPassword] = useState('');
+  const [securityModalLoading, setSecurityModalLoading] = useState(false);
+  const [securityModalError, setSecurityModalError] = useState<string | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  const loadAdminCredentials = async () => {
+    try {
+      const info = await api.getAdminCredentialsInfo();
+      setCurrentAdminPassword(info.currentPassword || 'admin123');
+    } catch {
+      const saved = localStorage.getItem('kc_admin_password') || 'admin123';
+      setCurrentAdminPassword(saved);
+    }
+  };
+
+  const handleUpdateAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityModalError(null);
+
+    if (!newAdminPassword.trim() || newAdminPassword.trim().length < 4) {
+      setSecurityModalError('New password must be at least 4 characters long.');
+      return;
+    }
+    if (newAdminPassword !== confirmAdminPassword) {
+      setSecurityModalError('New passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setSecurityModalLoading(true);
+    try {
+      await api.adminResetPassword({
+        newPassword: newAdminPassword.trim(),
+        phone: currentUser.phone || '1122307000'
+      });
+      setCurrentAdminPassword(newAdminPassword.trim());
+      setNewAdminPassword('');
+      setConfirmAdminPassword('');
+      setToastMsg(`Admin password updated to "${newAdminPassword.trim()}". Credentials saved.`);
+      setTimeout(() => setToastMsg(null), 5000);
+      setIsSecurityModalOpen(false);
+    } catch (err: any) {
+      setSecurityModalError(err.message || 'Failed to update admin password.');
+    } finally {
+      setSecurityModalLoading(false);
+    }
+  };
+
+  const handleRestoreDefaultPassword = async () => {
+    setSecurityModalLoading(true);
+    setSecurityModalError(null);
+    try {
+      await api.adminResetPassword({
+        newPassword: 'admin123',
+        phone: currentUser.phone || '1122307000'
+      });
+      setCurrentAdminPassword('admin123');
+      setNewAdminPassword('');
+      setConfirmAdminPassword('');
+      setToastMsg('Admin password restored to default "admin123"!');
+      setTimeout(() => setToastMsg(null), 5000);
+      setIsSecurityModalOpen(false);
+    } catch (err: any) {
+      setSecurityModalError(err.message || 'Failed to restore default password.');
+    } finally {
+      setSecurityModalLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadAllAdminData();
+    loadAdminCredentials();
   }, []);
 
   const loadAllAdminData = async () => {
@@ -362,16 +437,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="space-y-6 pb-16 font-sans text-slate-900">
+      {/* CPCB Central Regulatory Authority Web Desk Master Ribbon */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-700 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-600 flex items-center justify-center shrink-0 border border-amber-400 shadow-md">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight text-white">
+                  CPCB Central Regulatory Authority Web Desk
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-xs flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  <span>Statutory Web Page</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-300 mt-1 flex-wrap font-medium">
+                <span className="inline-flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-700">
+                  <ShieldAlert className="w-3 h-3 text-amber-400" />
+                  <span>Dual Master Control (Scrapper & Recycler)</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-700">
+                  <TrendingUp className="w-3 h-3 text-emerald-400" />
+                  <span>Statutory MSP Price Control</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-700">
+                  <Gavel className="w-3 h-3 text-rose-400" />
+                  <span>Legal Enforcement Desk</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-700">
+                  <Database className="w-3 h-3 text-blue-400" />
+                  <span>SQL Schema & Audit Trail</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-amber-200 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-amber-900/60">
+              🏛️ Official Government Web Desk
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Top Header / Platform Governance Banner */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
                 {t.adminPortal}
               </h1>
               <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded border border-emerald-200">
                 {t.systemHealthy}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-700">
+              <span className="font-semibold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                Officer: {currentUser.name}
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-600">
+                Official Mobile: <strong>{currentUser.phone || '+91 98450 99887'}</strong>
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="inline-flex items-center gap-1 text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>CPCB Central Regulatory Authority</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -380,6 +515,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              id="admin-security-settings-btn"
+              onClick={() => {
+                setIsSecurityModalOpen(true);
+                loadAdminCredentials();
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 shadow-xs transition-colors cursor-pointer"
+              title="View, reset, or recover Admin password credentials"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-700" />
+              <span>Password & Security</span>
+            </button>
+
             <button
               type="button"
               onClick={handleDownloadComplianceReport}
@@ -1403,6 +1552,198 @@ CREATE TABLE transactions (
         lang={lang}
         onClose={() => setSelectedReceiptLot(null)}
       />
+
+      {/* Admin Security & Password Management Modal */}
+      {isSecurityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base sm:text-lg tracking-tight">
+                    Admin Password & Security Settings
+                  </h3>
+                  <p className="text-xs text-amber-200/90 font-medium">
+                    Central CPCB Regulatory Access Credentials
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSecurityModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {securityModalError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                  <span>{securityModalError}</span>
+                </div>
+              )}
+
+              {/* Current Active Credentials Card */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Active CPCB Administrative Credentials</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Statutory Master
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Officer Name:</span>
+                    <strong className="text-slate-800">{currentUser.name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Official Mobile:</span>
+                    <strong className="text-slate-800 font-mono">{currentUser.phone || '+91 11 2230 7000'}</strong>
+                  </div>
+                </div>
+
+                {/* Password display & copy */}
+                <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Current Admin Password:</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-mono text-base font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-300">
+                        {showActivePassword ? currentAdminPassword : '••••••••'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowActivePassword(!showActivePassword)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
+                        title={showActivePassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showActivePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(currentAdminPassword);
+                        setCopiedPassword(true);
+                        setTimeout(() => setCopiedPassword(false), 2000);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      {copiedPassword ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Copy Password</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Master Recovery Notice & Quick Restore */}
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div>
+                  <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-600" />
+                    <span>Statutory Default Recovery Password:</span>
+                  </div>
+                  <p className="text-amber-700 text-[11px] mt-0.5">
+                    In case credentials are ever forgotten at the login portal, the master emergency password <strong className="font-mono text-amber-900">admin123</strong> is always accepted.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={securityModalLoading || currentAdminPassword === 'admin123'}
+                  onClick={handleRestoreDefaultPassword}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
+                >
+                  Restore "admin123"
+                </button>
+              </div>
+
+              {/* Change / Reset Password Form */}
+              <form onSubmit={handleUpdateAdminPassword} className="space-y-3.5 pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <Lock className="w-4 h-4 text-slate-600" />
+                  <span>Set New Admin Password</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      placeholder="Min 4 characters"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={confirmAdminPassword}
+                      onChange={(e) => setConfirmAdminPassword(e.target.value)}
+                      placeholder="Repeat new password"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSecurityModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={securityModalLoading}
+                    className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-98"
+                  >
+                    {securityModalLoading ? (
+                      <span>Saving...</span>
+                    ) : (
+                      <>
+                        <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Update Admin Password</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

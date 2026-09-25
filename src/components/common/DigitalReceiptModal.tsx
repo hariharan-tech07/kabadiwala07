@@ -138,29 +138,29 @@ Compliance Standard: E-Waste Management Rules 2022
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto print:p-0 print:bg-white animate-in fade-in duration-150">
-      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-4 my-8 relative print:border-none print:shadow-none print:m-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto print:p-0 print:bg-white animate-in fade-in duration-150">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-4 sm:p-7 shadow-2xl space-y-4 my-auto relative print:border-none print:shadow-none print:m-0 max-h-[92vh] flex flex-col">
         
         {/* Header with National Protocol Seal */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-xs tracking-wider shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-xs tracking-wider shadow-xs shrink-0">
               CPCB
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 leading-snug">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug truncate">
                 {ui.title}
               </h3>
-              <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline-block" />
-                <span>{ui.sub}</span>
+              <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 truncate">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline-block shrink-0" />
+                <span className="truncate">{ui.sub}</span>
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors print:hidden"
+            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors print:hidden shrink-0"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -168,48 +168,48 @@ Compliance Standard: E-Waste Management Rules 2022
         </div>
 
         {/* Certificate Body */}
-        <div className="p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4 text-xs">
+        <div className="p-3.5 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
           {/* Reference & QR Code representation */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2">
             <div>
               <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">
                 {ui.lotRef}
               </span>
-              <span className="font-mono font-bold text-emerald-800 text-base sm:text-lg">
+              <span className="font-mono font-bold text-emerald-800 text-sm sm:text-lg">
                 {lot.lot_reference_id}
               </span>
             </div>
-            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-700 font-mono">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] text-slate-700 font-mono shrink-0">
               <QrCode className="w-4 h-4 text-slate-800" />
               <span>CPCB-VALID</span>
             </div>
           </div>
 
           {/* Stakeholders grid */}
-          <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200">
             <div>
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
                 {ui.collector}
               </span>
-              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5">
-                <User className="w-3.5 h-3.5 text-emerald-600" />
-                {lot.scrapper_name}
+              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate">{lot.scrapper_name}</span>
               </strong>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
                 {ui.facility}
               </span>
-              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                {lot.recycler_name}
+              <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5 truncate">
+                <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="truncate">{lot.recycler_name}</span>
               </strong>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
                 {ui.handoverTime}
               </span>
-              <span className="text-slate-700 font-medium">
+              <span className="text-slate-700 font-medium truncate block">
                 {new Date(lot.handover_timestamp || lot.created_at).toLocaleString()}
               </span>
             </div>
@@ -217,7 +217,7 @@ Compliance Standard: E-Waste Management Rules 2022
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
                 {ui.gps}
               </span>
-              <span className="text-slate-700 font-mono text-[11px]">
+              <span className="text-slate-700 font-mono text-[11px] truncate block">
                 {lot.collection_gps?.latitude?.toFixed(4) || '19.0760'}, {lot.collection_gps?.longitude?.toFixed(4) || '72.8777'}
               </span>
             </div>
@@ -265,7 +265,7 @@ Compliance Standard: E-Waste Management Rules 2022
 
           {/* Compliance Footer notes */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-600 pt-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span>{ui.settlementChannel}</span>
               <strong className="text-slate-900 font-mono bg-slate-200/60 px-1.5 py-0.5 rounded">
                 {lot.payment_mode || 'UPI_IMPS_DIGITAL'}
@@ -279,11 +279,18 @@ Compliance Standard: E-Waste Management Rules 2022
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 print:hidden">
+        <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-end gap-2 pt-2 print:hidden shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full xs:w-auto px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center"
+          >
+            {ui.close}
+          </button>
           <button
             type="button"
             onClick={handleDownloadText}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+            className="w-full xs:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-500" />
             <span>{ui.download}</span>
@@ -291,17 +298,10 @@ Compliance Standard: E-Waste Management Rules 2022
           <button
             type="button"
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+            className="w-full xs:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
           >
             <Printer className="w-4 h-4" />
             <span>{ui.print}</span>
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
-          >
-            {ui.close}
           </button>
         </div>
       </div>

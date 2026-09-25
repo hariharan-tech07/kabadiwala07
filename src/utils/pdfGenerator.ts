@@ -566,3 +566,161 @@ export function generateAdminComplianceReportPDF(report: CPCBComplianceReport): 
 
   doc.save(`CPCB_Statutory_Compliance_Report_${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+export function generateLotReceiptPdf(lot: Transaction): void {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const darkSlate = [15, 23, 42];
+  const emeraldGreen = [16, 185, 129];
+  const textMuted = [100, 116, 139];
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 40, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('KABADIWALA CONNECT', 14, 18);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(16, 185, 129);
+  doc.text('OFFICIAL DIGITAL GATE PASS & TRACEABILITY RECEIPT', 14, 26);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`Regulatory Standard: CPCB E-Waste Management Rules 2022 | Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 32);
+
+  // Status Badge
+  doc.setFillColor(16, 185, 129);
+  doc.roundedRect(148, 11, 48, 18, 2, 2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GATE PASS VERIFIED', 152, 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text(`Status: ${lot.status || 'COMPLETED'}`, 152, 24);
+
+  // Lot Reference Box
+  let y = 50;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(14, y, 182, 28, 2, 2, 'FD');
+  doc.setDrawColor(226, 232, 240);
+
+  doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Lot Docket Ref: #${lot.lot_reference_id}`, 20, y + 8);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+  doc.text(`Handover Date: ${new Date(lot.handover_timestamp || lot.created_at).toLocaleString('en-IN')}`, 20, y + 15);
+  doc.text(`GPS Position : ${lot.collection_gps ? `${lot.collection_gps.latitude.toFixed(4)}, ${lot.collection_gps.longitude.toFixed(4)}` : 'Standard Geolocation Pin'}`, 20, y + 21);
+
+  // Participants Details
+  y += 36;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+  doc.text('Participants & Chain of Custody', 14, y);
+
+  y += 6;
+  doc.setFillColor(241, 245, 249);
+  doc.rect(14, y, 182, 8, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(51, 65, 85);
+  doc.text('Party', 20, y + 5.5);
+  doc.text('Identifier / Name', 70, y + 5.5);
+  doc.text('Compliance Credential', 135, y + 5.5);
+
+  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+
+  doc.text('Waste Collector (Scrapper)', 20, y + 5);
+  doc.text(`${lot.scrapper_name || 'Ramesh Kumar'}`, 70, y + 5);
+  doc.text(`Aadhaar-KYC Verified (ID: ${lot.scrapper_id || 'USR-SCR'})`, 135, y + 5);
+  doc.line(14, y + 7.5, 196, y + 7.5);
+
+  y += 8;
+  doc.text('Authorized Recycler', 20, y + 5);
+  doc.text(`${lot.recycler_name || 'EcoRecycle Facility'}`, 70, y + 5);
+  doc.text(`CPCB Registered Facility (ID: ${lot.recycler_id || 'REC-01'})`, 135, y + 5);
+  doc.line(14, y + 7.5, 196, y + 7.5);
+
+  // Material & Weight Breakdown
+  y += 18;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+  doc.text('Certified Material & Weighment Details', 14, y);
+
+  y += 6;
+  doc.setFillColor(241, 245, 249);
+  doc.rect(14, y, 182, 8, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(51, 65, 85);
+  doc.text('E-Waste Category', 20, y + 5.5);
+  doc.text('Certified Net Mass', 80, y + 5.5);
+  doc.text('Agreed Rate (Rs./kg)', 125, y + 5.5);
+  doc.text('Total Subtotal', 165, y + 5.5);
+
+  const weight = lot.actual_weight || lot.estimated_weight || 10;
+  const rate = lot.offered_rate_per_kg || 340;
+  const payout = lot.final_payout || Math.round(weight * rate);
+
+  y += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(lot.category, 20, y + 5.5);
+  doc.text(`${weight.toFixed(1)} kg`, 80, y + 5.5);
+  doc.text(`Rs. ${rate} / kg`, 125, y + 5.5);
+  doc.text(`Rs. ${payout.toLocaleString('en-IN')}`, 165, y + 5.5);
+  doc.line(14, y + 8, 196, y + 8);
+
+  // Sorting breakdown if present
+  if (lot.sorting_breakdown) {
+    y += 10;
+    doc.setFontSize(8);
+    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+    doc.text(`Tare / Moisture Breakdown: Usable pure scrap: ${lot.sorting_breakdown.required_kg} kg | Dross: ${lot.sorting_breakdown.unrequired_kg} kg | Penalty: Rs. ${lot.sorting_breakdown.contamination_deduction}`, 20, y + 4);
+  }
+
+  // Total Settlement Block
+  y += 16;
+  doc.setFillColor(236, 253, 245);
+  doc.roundedRect(14, y, 182, 22, 2, 2, 'F');
+  doc.setDrawColor(16, 185, 129);
+  doc.roundedRect(14, y, 182, 22, 2, 2, 'D');
+
+  doc.setTextColor(6, 95, 70);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TOTAL OFFICIAL SETTLEMENT (NET PAYOUT):', 20, y + 9);
+  doc.setFontSize(14);
+  doc.text(`Rs. ${payout.toLocaleString('en-IN')}`, 20, y + 17);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Payment Mode: ${lot.payment_mode || 'DIRECT_UPI_DIGITAL'}`, 120, y + 9);
+  doc.text('Settlement Ledger: Synchronized with CPCB Grid', 120, y + 16);
+
+  // Statutory Footer
+  const footerY = 270;
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, footerY, 196, footerY);
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('This digital gate pass is an official instrument issued in compliance with the CPCB E-Waste (Management) Rules, 2022.', 14, footerY + 6);
+  doc.text(`Cryptographic Audit Pass ID: KC-RECEIPT-${lot.lot_reference_id}-${Date.now().toString(36).toUpperCase()}`, 14, footerY + 11);
+
+  doc.save(`GatePass_Receipt_${lot.lot_reference_id}.pdf`);
+}

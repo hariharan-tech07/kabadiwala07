@@ -5,6 +5,7 @@ import {
   AlertTriangle, RefreshCw, ArrowRight, Lock, Check, ShieldCheck,
   Eye, Zap, Layers, Info, Volume2
 } from 'lucide-react';
+import { DeviceCameraModal } from '../common/DeviceCameraModal';
 
 import pcbImg from '../../assets/images/pcb_scrap_batch_1789436553690.jpg';
 import copperImg from '../../assets/images/copper_wire_scrap_1789436573758.jpg';
@@ -277,9 +278,15 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
   const [isWeightConfirmed, setIsWeightConfirmed] = useState(true);
   const [broadcastedSuccess, setBroadcastedSuccess] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDeviceCameraOpen, setIsDeviceCameraOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDeviceCameraCapture = (base64Image: string) => {
+    const timestamp = Date.now();
+    onChangeImage(base64Image, `camera_capture_${timestamp}.jpg`, 'image/jpeg');
+  };
 
   const numericWeight = parseFloat(weightKg) || 10;
   const currentMaterial = materials.find(m => m.category === selectedCategory);
@@ -376,8 +383,9 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => setIsDeviceCameraOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
+            title="Open device camera (mobile rear camera or laptop webcam)"
           >
             <Camera className="w-4 h-4 text-emerald-200" />
             <span>{tCap.cameraBtn}</span>
@@ -431,11 +439,11 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
       )}
 
       {/* Two Column Layout: Left Image Capture & AI; Right Weight Entry & Confirmation */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         
         {/* Left Column: Image Preview & AI Detection (5 Cols) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-xs space-y-4">
+          <div className="bg-white rounded-2xl border-2 border-slate-200 p-3.5 sm:p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Eye className="w-3.5 h-3.5 text-slate-400" />
@@ -565,7 +573,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">{tCap.clickToClassify}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
                 {SAMPLE_PRESETS.map((sample) => (
                   <button
                     key={sample.name}
@@ -598,7 +606,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
 
         {/* Right Column: Weight Entering & Weight Confirmation (7 Cols) */}
         <div className="lg:col-span-7 space-y-5">
-          <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 sm:p-7 shadow-xs space-y-6">
+          <div className="bg-white rounded-2xl border-2 border-slate-200 p-3.5 sm:p-6 shadow-xs space-y-5 sm:space-y-6">
             
             {/* Category Selector */}
             <div>
@@ -633,7 +641,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
                 <button
                   type="button"
                   onClick={() => handleAdjustWeight(-5)}
-                  className="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-base flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-base flex items-center justify-center transition-colors cursor-pointer shrink-0"
                   title="Decrease 5 kg"
                 >
                   -5
@@ -646,9 +654,9 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
                     step="0.5"
                     value={weightKg}
                     onChange={(e) => onChangeWeight(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-emerald-500 rounded-xl px-4 py-3.5 text-2xl font-mono font-black text-slate-950 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="w-full bg-slate-50 border-2 border-emerald-500 rounded-xl px-4 py-3 sm:py-3.5 text-xl sm:text-2xl font-mono font-black text-slate-950 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm text-slate-500">
+                  <span className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 font-bold text-xs sm:text-sm text-slate-500">
                     KG
                   </span>
                 </div>
@@ -656,7 +664,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
                 <button
                   type="button"
                   onClick={() => handleAdjustWeight(5)}
-                  className="w-12 h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-base flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-base flex items-center justify-center transition-colors cursor-pointer shrink-0"
                   title="Increase 5 kg"
                 >
                   +5
@@ -664,14 +672,14 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
               </div>
 
               {/* Quick weight shortcut pills */}
-              <div className="flex items-center gap-2 mt-2.5">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-2.5 flex-wrap">
                 <span className="text-xs font-semibold text-slate-500">{tCap.quickSet}</span>
                 {[5, 10, 25, 50, 100].map((w) => (
                   <button
                     key={w}
                     type="button"
                     onClick={() => onChangeWeight(w.toString())}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                       weightKg === w.toString()
                         ? 'bg-emerald-600 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -684,7 +692,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
             </div>
 
             {/* Real-time Fair Price Range Estimation */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col xs:flex-row xs:items-center justify-between gap-2">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
                   {tCap.estimatedTotal}
@@ -693,8 +701,8 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
                   Based on ₹{aiResult?.estimated_rate_per_kg_min || Math.round(baseRate * 0.95)} - ₹{aiResult?.estimated_rate_per_kg_max || Math.round(baseRate * 1.12)}/kg
                 </span>
               </div>
-              <div className="text-right">
-                <div className="text-xl sm:text-2xl font-black text-emerald-800 flex items-center justify-end gap-1">
+              <div className="text-left xs:text-right">
+                <div className="text-xl sm:text-2xl font-black text-emerald-800 flex items-center xs:justify-end gap-1">
                   <span>₹{estimatedMin.toLocaleString()}</span>
                   <span className="text-slate-400 text-sm font-normal">–</span>
                   <span>₹{estimatedMax.toLocaleString()}</span>
@@ -729,7 +737,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
             )}
 
             {/* WEIGHT CONFIRMATION & SCALE LOCK (USER REQUIREMENT) */}
-            <div className="p-5 rounded-2xl bg-amber-50/80 border-2 border-amber-300 space-y-3">
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-amber-50/80 border-2 border-amber-300 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-amber-200 text-amber-900">
@@ -775,7 +783,7 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
               id="scrapper-broadcast-lot-btn"
               disabled={isBroadcasting}
               onClick={handleExecuteBroadcast}
-              className="w-full py-4 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base sm:text-lg flex items-center justify-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 sm:py-4 px-4 sm:px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base sm:text-lg flex items-center justify-center gap-2.5 shadow-md transition-all cursor-pointer disabled:opacity-50"
             >
               {isBroadcasting ? (
                 <>
@@ -794,6 +802,13 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
         </div>
 
       </div>
+
+      {/* Direct Device Camera Modal (Supports laptop webcam & mobile cameras) */}
+      <DeviceCameraModal
+        isOpen={isDeviceCameraOpen}
+        onClose={() => setIsDeviceCameraOpen(false)}
+        onCapture={handleDeviceCameraCapture}
+      />
     </div>
   );
 };

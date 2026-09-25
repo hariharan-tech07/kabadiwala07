@@ -150,39 +150,39 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col my-auto">
         {/* Modal Topbar */}
-        <div className="bg-rose-950 text-white px-6 py-4 flex items-center justify-between border-b border-rose-900">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-rose-800 text-rose-200">
+        <div className="bg-rose-950 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between border-b border-rose-900 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-lg bg-rose-800 text-rose-200 shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold tracking-tight">{ui.title}</h3>
-              <p className="text-xs text-rose-300">{ui.sub}</p>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold tracking-tight truncate">{ui.title}</h3>
+              <p className="text-xs text-rose-300 truncate">{ui.sub}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-rose-300 hover:text-white hover:bg-rose-900 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-rose-300 hover:text-white hover:bg-rose-900 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {submittedSuccess ? (
-          <div className="p-8 text-center space-y-4">
+          <div className="p-6 sm:p-8 text-center space-y-4 overflow-y-auto">
             <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h4 className="text-lg font-bold text-slate-900">{ui.successTitle}</h4>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">{ui.successTitle}</h4>
             <p className="text-xs text-slate-600 max-w-sm mx-auto">
               {ui.successDesc}
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1 min-h-0">
             {errorMsg && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -191,9 +191,9 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
             )}
 
             {lot && (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 flex justify-between items-center">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 flex flex-col xs:flex-row justify-between items-start xs:items-center gap-1.5">
                 <span className="font-semibold text-slate-500">{ui.relatedLot}</span>
-                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300">
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300 truncate max-w-full">
                   {lot.lot_reference_id} ({lot.category})
                 </span>
               </div>
@@ -244,18 +244,18 @@ export const ComplaintModal: React.FC<ComplaintModalProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="w-full xs:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer text-center"
               >
                 {ui.cancel}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="w-full xs:w-auto px-5 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {submitting ? (
                   <>

@@ -10,7 +10,11 @@ import {
   Complaint,
   LegalCase,
   AuditLogEntry,
-  SortingInspection
+  SortingInspection,
+  ScrapItem,
+  PaymentDetails,
+  PaymentMode,
+  PaymentStatus
 } from '../src/types';
 import { syncDocToFirestore, removeDocFromFirestore, seedFirestoreIfEmpty } from './firestore';
 

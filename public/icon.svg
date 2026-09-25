@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#065F46"/>
+  <!-- Circular Recycle Swirl Arrows -->
+  <circle cx="256" cy="256" r="190" stroke="#10B981" stroke-width="20" stroke-dasharray="24 16" opacity="0.4"/>
+  <path d="M256 110 L286 160 L226 160 Z" fill="#34D399"/>
+  <path d="M382 328 L400 270 L348 298 Z" fill="#34D399"/>
+  <path d="M130 328 L164 298 L112 270 Z" fill="#34D399"/>
+  <!-- Central Microchip & Recycle Icon -->
+  <rect x="186" y="186" width="140" height="140" rx="28" fill="#047857" stroke="#34D399" stroke-width="8"/>
+  <!-- Circuit pins -->
+  <line x1="216" y1="166" x2="216" y2="186" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <line x1="256" y1="166" x2="256" y2="186" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <line x1="296" y1="166" x2="296" y2="186" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <line x1="216" y1="326" x2="216" y2="346" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <line x1="256" y1="326" x2="256" y2="346" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <line x1="296" y1="326" x2="296" y2="346" stroke="#34D399" stroke-width="8" stroke-linecap="round"/>
+  <!-- Chip Core -->
+  <circle cx="256" cy="256" r="34" fill="#10B981"/>
+  <path d="M248 244 L264 256 L248 268 Z" fill="#FFFFFF"/>
+</svg>

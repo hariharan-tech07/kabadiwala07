@@ -175,8 +175,8 @@ export const PaymentSettlementModal: React.FC<PaymentSettlementModalProps> = ({
   const upiQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(upiDeepLink)}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-5 my-8 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-7 shadow-2xl space-y-4 sm:space-y-5 my-4 sm:my-8 relative max-h-[92vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-start justify-between pb-3 border-b border-slate-100">
@@ -654,8 +654,8 @@ export const PaymentSettlementModal: React.FC<PaymentSettlementModalProps> = ({
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Disburse ₹{amount.toLocaleString('en-IN')} via {selectedMode}</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Disburse ₹{amount.toLocaleString('en-IN')}</span>
               </>
             )}
           </button>

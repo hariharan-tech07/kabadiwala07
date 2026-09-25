@@ -2,9 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, ChatMessage, Transaction, VernacularLang } from '../types';
 import { api } from '../api/client';
 import {
+  playChatMessageSound,
+  isAudioFeedbackEnabled,
+  toggleAudioFeedback,
+  subscribeAudioFeedback
+} from '../utils/soundEffects';
+import {
   X, Send, MapPin, DollarSign, Package, Clock, ShieldCheck,
   Minimize2, Maximize2, Square, ChevronDown, Users, Check,
-  Sparkles, Phone, RefreshCw, MessageSquare
+  Sparkles, Phone, RefreshCw, MessageSquare, Volume2, VolumeX
 } from 'lucide-react';
 
 export interface ChatTarget {
@@ -226,12 +232,18 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   const [allLots, setAllLots] = useState<Transaction[]>([]);
   const [showQuickTemplates, setShowQuickTemplates] = useState(false);
   const [hasUnreadBelow, setHasUnreadBelow] = useState(false);
+  const [soundActive, setSoundActive] = useState(() => isAudioFeedbackEnabled());
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isFirstLoadRef = useRef(true);
   const isNearBottomRef = useRef(true);
 
   const lotRefId = lot?.lot_reference_id;
+
+  // Sync with global audio feedback state
+  useEffect(() => {
+    return subscribeAudioFeedback((enabled) => setSoundActive(enabled));
+  }, []);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const el = messagesContainerRef.current;
@@ -311,6 +323,12 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
         }
 
         if (prev.length > 0 && data.length > prev.length) {
+          // Play subtle audio ping if incoming message is from the other party
+          const incomingNew = data.slice(prev.length).some(m => m.sender_id !== currentUser.id);
+          if (incomingNew) {
+            playChatMessageSound();
+          }
+
           if (!isNearBottomRef.current) {
             setHasUnreadBelow(true);
           }
@@ -320,6 +338,33 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
       });
     } catch (err) {
       console.warn('Failed to load chats:', err);
+    }
+  };
+
+  // Helper for quick testing of the audio feedback & live reply flow
+  const handleSimulatePartnerMessage = async () => {
+    try {
+      const sampleReplies = [
+        'Confirmed, certified weighment scale is active at our gate.',
+        'We can offer doorstep pickup in 45 minutes with verified electronic scales.',
+        'Please bring the lot manifest for instant EPR green token crediting.',
+        'Benchmark market rate accepted! Dispatched collection truck.',
+        'Lot weight verified on our platform. Preparing digital escrow payout.'
+      ];
+      const randomReply = sampleReplies[Math.floor(Math.random() * sampleReplies.length)];
+
+      await api.sendChatMessage({
+        lot_reference_id: lotRefId,
+        sender_id: targetUser.id,
+        sender_name: targetUser.name,
+        sender_role: targetUser.role,
+        receiver_id: currentUser.id,
+        message: randomReply
+      });
+
+      await loadMessages();
+    } catch (err) {
+      console.warn('Failed to simulate partner reply:', err);
     }
   };
 
@@ -573,8 +618,24 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             )}
           </div>
 
-          {/* Window Mode Controls (Flexibility Features) */}
+          {/* Window Mode Controls & Audio Feedback (Flexibility Features) */}
           <div className="flex items-center gap-1 text-slate-300">
+            {/* Audio Feedback Toggle */}
+            <button
+              type="button"
+              id="chat-sound-toggle-btn"
+              onClick={() => {
+                const next = toggleAudioFeedback();
+                setSoundActive(next);
+              }}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                soundActive ? 'text-emerald-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-800'
+              }`}
+              title={soundActive ? 'Audio Feedback Active (Click to mute)' : 'Audio Feedback Muted (Click to unmute)'}
+            >
+              {soundActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+            </button>
+
             {/* Minimize to Floating Dock */}
             <button
               type="button"
@@ -853,6 +914,39 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
         {/* INPUT BAR */}
         <div className="p-3 bg-white border-t border-slate-200 shrink-0">
+          <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                id="chat-test-audio-ping-btn"
+                onClick={handleSimulatePartnerMessage}
+                className="text-[10px] text-slate-600 hover:text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 font-medium cursor-pointer shrink-0"
+                title="Simulates an incoming message from the other party to test the soft audio notification chime"
+              >
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>Simulate Incoming Message</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => playChatMessageSound()}
+                className="text-[10px] text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 font-medium cursor-pointer shrink-0"
+                title="Play chat message notification sound"
+              >
+                <Volume2 className="w-3 h-3 text-slate-500" />
+                <span>Test Sound</span>
+              </button>
+            </div>
+            {lot && (
+              <button
+                type="button"
+                onClick={() => setShowOfferModal(true)}
+                className="text-[10px] text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full transition-colors font-bold cursor-pointer shrink-0"
+              >
+                💰 Propose Rate
+              </button>
+            )}
+          </div>
+
           <form
             onSubmit={(e) => {
               e.preventDefault();

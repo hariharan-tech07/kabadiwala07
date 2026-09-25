@@ -11,11 +11,18 @@ import { TransactionPaymentHistoryView } from '../common/TransactionPaymentHisto
 import { notifyUser } from '../common/NotificationToast';
 import { generateRecyclerEprCertificate } from '../../utils/pdfGenerator';
 import {
+  playTransactionAssignedSound,
+  isAudioFeedbackEnabled,
+  toggleAudioFeedback,
+  subscribeAudioFeedback
+} from '../../utils/soundEffects';
+import {
   Building2, Sliders, CheckCircle2, MessageSquare, Scale,
   FileText, ShieldCheck, MapPin, Save, RefreshCw, X, AlertCircle,
   Truck, ArrowUpRight, DollarSign, Filter, Compass, Navigation,
   Users, Phone, Sparkles, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Search, PlusCircle,
-  ShieldAlert, Download, Send, Layers, Check, IndianRupee, QrCode, WifiOff, CreditCard
+  ShieldAlert, Download, Send, Layers, Check, IndianRupee, QrCode, WifiOff, CreditCard,
+  Volume2, VolumeX, Globe
 } from 'lucide-react';
 
 export type RecyclerMenuTab = 'lots' | 'rates' | 'weighment' | 'map' | 'chat' | 'compliance' | 'payments';
@@ -331,6 +338,7 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
       setTransactions(prev => [newTx, ...prev]);
       setToastMessage(lang === 'mr' ? `नवीन लॉट ${newTx.lot_reference_id} मिळाला!` : `Simulated new inward lot ${newTx.lot_reference_id} received from ${scrapper.name}!`);
 
+      playTransactionAssignedSound();
       notifyUser({
         title: lang === 'hi' ? 'नया लॉट कनेक्शन प्राप्त हुआ' : lang === 'mr' ? 'नवीन आवक लॉट प्राप्त झाला' : lang === 'ta' ? 'புதிய உள்வரும் லாட் பெறப்பட்டது' : 'New Inward Lot Connection',
         message: lang === 'hi'
@@ -340,7 +348,7 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
           : lang === 'ta'
           ? `${scrapper.name} புதிய லாட் ${newTx.lot_reference_id} (48 கிலோ ${sampleCategory}) அனுப்பியுள்ளார்.`
           : `New scrap connection from ${scrapper.name}: Lot ${newTx.lot_reference_id} (48 kg, ${sampleCategory}).`,
-        type: 'connection',
+        type: 'assignment',
         lotId: newTx.id,
         lotReferenceId: newTx.lot_reference_id
       });
@@ -459,21 +467,82 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
 
   return (
     <div className="space-y-6 pb-16 font-sans">
+      {/* Authorized Recycler Web Portal Master Ribbon */}
+      <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-blue-700/50 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shrink-0 border border-blue-400 shadow-md">
+              <Globe className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight">
+                  Authorized Recycler Web Portal
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-300 text-blue-950 shadow-xs flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  <span>Enterprise Web Page</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-blue-100 mt-1 flex-wrap font-medium">
+                <span className="inline-flex items-center gap-1 bg-blue-900/80 px-2 py-0.5 rounded-md border border-blue-700/60">
+                  <Scale className="w-3 h-3 text-blue-300" />
+                  <span>Bench Weighbridge Terminal</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-blue-900/80 px-2 py-0.5 rounded-md border border-blue-700/60">
+                  <FileText className="w-3 h-3 text-blue-300" />
+                  <span>CPCB EPR Circular Credits</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-blue-900/80 px-2 py-0.5 rounded-md border border-blue-700/60">
+                  <CreditCard className="w-3 h-3 text-blue-300" />
+                  <span>Formal Bank/UPI Payouts</span>
+                </span>
+                <span className="inline-flex items-center gap-1 bg-blue-900/80 px-2 py-0.5 rounded-md border border-blue-700/60">
+                  <ShieldCheck className="w-3 h-3 text-emerald-300" />
+                  <span>CPCB Reg: {facility?.cpcb_auth_number || user.cpcb_number || 'CPCB/EW/2026/VALID'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-blue-200 bg-blue-950/70 px-3 py-1.5 rounded-xl border border-blue-800">
+              💻 Desktop Cloud Workspace
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Top Banner & Header */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 {t.recyclerPortal}
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                 <Building2 className="w-3.5 h-3.5" />
-                {facility?.facility_name || 'Authorized Aggregation Center'}
+                {facility?.facility_name || user.entity_name || 'Authorized Aggregation Center'}
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              CPCB Auth: <strong className="text-slate-800 font-mono">{facility?.cpcb_auth_number || 'CPCB/EW/2026/VALID'}</strong> • {t.recyclerPortalDesc}
+            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-700">
+              <span className="font-semibold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                Rep: {user.name}
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-600 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{facility?.address || user.location}</span>
+              </span>
+              <span className="text-slate-400">•</span>
+              <span className="inline-flex items-center gap-1 text-blue-700 font-semibold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>CPCB Auth: {facility?.cpcb_auth_number || user.cpcb_number || 'CPCB/EW/2026/VALID'}</span>
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {t.recyclerPortalDesc}
             </p>
           </div>
 
@@ -514,12 +583,31 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
 
             <button
               type="button"
+              id="recycler-test-inward-lot-btn"
               onClick={handleSimulateInwardLot}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer"
               title="Simulate incoming scrap lot for instant testing"
             >
               <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
               <span>+ Test Inward Lot</span>
+            </button>
+
+            <button
+              type="button"
+              id="recycler-test-audio-chime-btn"
+              onClick={() => {
+                playTransactionAssignedSound();
+                notifyUser({
+                  title: lang === 'hi' ? 'लेनदेन असाइन ऑडियो टेस्ट' : lang === 'mr' ? 'व्यवहार वाटप ऑडिओ चाचणी' : lang === 'ta' ? 'ஒதுக்கீடு ஒலி சோதனை' : 'Transaction Assigned Sound Test',
+                  message: lang === 'hi' ? 'सौम्य आरोही हार्मोनिक ऑडियो चाइम्स' : lang === 'mr' ? 'नवीन व्यवहारासाठी सौम्य ध्वनी संकेत' : lang === 'ta' ? 'புதிய ஒதுக்கீட்டிற்கான ஒலி சோதனை' : 'Acoustic feedback: Soft ascending harmonic chime for new transaction assignment.',
+                  type: 'assignment'
+                });
+              }}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+              title="Test the subtle transaction assigned audio feedback chime"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Audio Chime Test</span>
             </button>
           </div>
         </div>

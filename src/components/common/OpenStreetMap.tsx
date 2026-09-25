@@ -172,9 +172,10 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
   const [locError, setLocError] = useState<string | null>(null);
 
   // Layer toggles
+  const isScrapperPortalOnly = mode === 'scrapper_view' || safeUser.role === 'scrapper';
   const [showRecyclers, setShowRecyclers] = useState(true);
-  const [showScrappers, setShowScrappers] = useState(mode === 'admin_view' || mode === 'recycler_view' || mode === 'all');
-  const [showLots, setShowLots] = useState(mode !== 'scrapper_view');
+  const [showScrappers, setShowScrappers] = useState(!isScrapperPortalOnly && (mode === 'admin_view' || mode === 'recycler_view' || mode === 'all'));
+  const [showLots, setShowLots] = useState(!isScrapperPortalOnly);
   const [showRadius, setShowRadius] = useState(true);
 
   // Map Tile Style: 'voyager' (clean, modern, high contrast) vs 'standard' (classic OSM)
@@ -860,28 +861,32 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
             >
               🏭 Recyclers ({geoData.recyclers.length})
             </button>
-            <button
-              type="button"
-              onClick={() => setShowScrappers(!showScrappers)}
-              className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
-                showScrappers
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              🚲 Scrappers ({geoData.scrappers.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowLots(!showLots)}
-              className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
-                showLots
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              📦 Lots ({geoData.lots.length})
-            </button>
+            {!isScrapperPortalOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowScrappers(!showScrappers)}
+                  className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
+                    showScrappers
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🚲 Scrappers ({geoData.scrappers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLots(!showLots)}
+                  className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
+                    showLots
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  📦 Lots ({geoData.lots.length})
+                </button>
+              </>
+            )}
           </div>
 
           {/* Style Toggle (Clean Voyager vs Classic OSM) */}

@@ -16,6 +16,7 @@ export interface User {
   status?: 'Active' | 'Pending Admin Verification' | 'Suspended';
   suspension_reason?: string;
   created_at?: string;
+  entity_name?: string;
 }
 
 export interface Material {

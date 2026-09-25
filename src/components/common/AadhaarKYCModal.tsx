@@ -97,59 +97,71 @@ export const AadhaarKYCModal: React.FC<AadhaarKYCModalProps> = ({ isOpen, onClos
   const ui = UI_TEXT[lang] || UI_TEXT.en;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
         {/* Modal Topbar */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <div>
-              <h3 className="text-base font-bold tracking-tight">{ui.title}</h3>
-              <p className="text-xs text-slate-400">{ui.sub}</p>
+        <div className="bg-slate-900 text-white px-5 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold tracking-tight truncate">{ui.title}</h3>
+              <p className="text-xs text-slate-400 truncate">{ui.sub}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Card Body - Styled like official digital Aadhaar card */}
-        <div className="p-6">
-          <div className="border-2 border-emerald-500/40 rounded-xl p-5 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50 relative overflow-hidden shadow-xs">
+        <div className="p-4 sm:p-6 overflow-y-auto">
+          <div className="border-2 border-emerald-500/40 rounded-xl p-4 sm:p-5 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50 relative overflow-hidden shadow-xs">
             {/* National Emblem & Watermark */}
-            <div className="flex items-start justify-between border-b border-slate-200/80 pb-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+            <div className="flex items-start justify-between border-b border-slate-200/80 pb-3 mb-4 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-xs shrink-0">
                   UID
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 tracking-wider">{ui.govtHeader}</h4>
-                  <p className="text-[10px] text-emerald-700 font-semibold">{ui.govtSub}</p>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-900 tracking-wider truncate">{ui.govtHeader}</h4>
+                  <p className="text-[10px] text-emerald-700 font-semibold truncate">{ui.govtSub}</p>
                 </div>
               </div>
-              <div className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              <div className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                 {ui.verified}
               </div>
             </div>
 
             {/* Content Row */}
-            <div className="flex gap-4 items-center">
-              <div className="w-24 h-28 bg-slate-200 rounded-lg overflow-hidden border border-slate-300 shrink-0 flex items-center justify-center relative">
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80"
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-[8px] text-white text-center font-bold py-0.5">
-                  CPCB VERIFIED
+            <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="w-20 h-24 sm:w-24 sm:h-28 bg-slate-200 rounded-lg overflow-hidden border border-slate-300 shrink-0 flex items-center justify-center relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80"
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-[8px] text-white text-center font-bold py-0.5">
+                    CPCB VERIFIED
+                  </div>
+                </div>
+                <div className="sm:hidden flex-1 space-y-1 text-xs min-w-0">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">{ui.name}</span>
+                    <p className="font-bold text-slate-900 text-sm truncate">{user.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">{ui.role}</span>
+                    <p className="font-semibold text-slate-700 capitalize truncate">{user.role}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-1.5 text-xs">
+              <div className="hidden sm:block flex-1 space-y-1.5 text-xs">
                 <div>
                   <span className="text-slate-400 text-[10px] uppercase font-bold block">{ui.name}</span>
                   <p className="font-bold text-slate-900 text-sm">{user.name}</p>
@@ -168,17 +180,28 @@ export const AadhaarKYCModal: React.FC<AadhaarKYCModalProps> = ({ isOpen, onClos
                 </div>
               </div>
 
-              <div className="shrink-0 flex flex-col items-center">
-                <div className="w-16 h-16 bg-white p-1 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center">
-                  <QrCode className="w-14 h-14 text-slate-900" />
+              <div className="sm:hidden w-full grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200">
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold block">{ui.hub}</span>
+                  <p className="font-semibold text-slate-700 truncate">{user.location}</p>
                 </div>
-                <span className="text-[9px] font-mono text-slate-500 mt-1">SECURE QR</span>
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold block">{ui.phone}</span>
+                  <p className="font-semibold text-slate-700 truncate">{user.phone || '+91 98450 12345'}</p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex sm:flex-col items-center gap-2 sm:gap-1">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white p-1 rounded-lg border border-slate-300 shadow-2xs flex items-center justify-center">
+                  <QrCode className="w-12 h-12 sm:w-14 sm:h-14 text-slate-900" />
+                </div>
+                <span className="text-[9px] font-mono text-slate-500">SECURE QR</span>
               </div>
             </div>
 
             {/* Aadhaar Number Strip */}
-            <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
-              <div className="font-mono text-base font-black tracking-widest text-slate-800">
+            <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1">
+              <div className="font-mono text-sm sm:text-base font-black tracking-widest text-slate-800">
                 XXXX  XXXX  <span className="text-emerald-600">{user.aadhaar_last4 || '8821'}</span>
               </div>
               <div className="text-[10px] text-slate-500 font-medium">
@@ -188,7 +211,7 @@ export const AadhaarKYCModal: React.FC<AadhaarKYCModalProps> = ({ isOpen, onClos
           </div>
 
           {/* Benefits Info */}
-          <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="flex items-center gap-1.5 text-emerald-700 font-bold mb-1">
                 <Award className="w-4 h-4" />

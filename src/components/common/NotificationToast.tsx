@@ -1,6 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { VernacularLang, Transaction, User } from '../../types';
 import { api } from '../../api/client';
+import {
+  playChatMessageSound,
+  playTransactionAssignedSound,
+  playGeneralChime
+} from '../../utils/soundEffects';
 import {
   Bell, CheckCircle2, AlertTriangle, Scale,
   UserPlus, MessageSquare, X, ArrowRight, Sparkles, ExternalLink
@@ -10,7 +15,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'connection' | 'status' | 'weight' | 'payment' | 'dispute' | 'info';
+  type: 'connection' | 'status' | 'weight' | 'payment' | 'dispute' | 'info' | 'chat' | 'assignment';
   timestamp: Date;
   lotId?: string;
   lotReferenceId?: string;
@@ -42,25 +47,14 @@ export const notifyUser = (notification: Omit<AppNotification, 'id' | 'timestamp
     window.dispatchEvent(new CustomEvent('kc-notification-event', { detail: fullNotification }));
   }
 
-  // Play subtle pleasant chime via Web Audio API
+  // Play subtle audio feedback based on event type
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioCtx) {
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
+    if (fullNotification.type === 'chat') {
+      playChatMessageSound();
+    } else if (fullNotification.type === 'connection' || fullNotification.type === 'assignment') {
+      playTransactionAssignedSound();
+    } else {
+      playGeneralChime();
     }
   } catch {
     // ignore audio block
@@ -168,7 +162,10 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
   onOpenChatWithUser
 }) => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const lastKnownStatusesRef = React.useRef<Map<string, string>>(new Map());
+  const lastKnownStatusesRef = useRef<Map<string, string>>(new Map());
+  const isInitialTxCheckRef = useRef<boolean>(true);
+  const lastKnownChatIdsRef = useRef<Set<string>>(new Set());
+  const isInitialChatCheckRef = useRef<boolean>(true);
   const loc = LOCALIZED_STRINGS[lang] || LOCALIZED_STRINGS.en;
 
   // Subscribe to notifyUser calls
@@ -187,7 +184,7 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
     };
   }, []);
 
-  // Monitor active transactions for live status changes
+  // Monitor active transactions for newly assigned lots & status changes
   useEffect(() => {
     if (!currentUser) return;
 
@@ -199,18 +196,51 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
         if (!isMounted || !txs || !Array.isArray(txs)) return;
 
         // Filter transactions relevant to current user
+        const isRecycler = currentUser.role === 'recycler';
         const userTxs = txs.filter(t => 
           t.scrapper_id === currentUser.id ||
           t.recycler_id === currentUser.id ||
+          (isRecycler && (t.recycler_id === 'rec-1' || t.recycler_name?.toLowerCase().includes('ecorecycle'))) ||
           currentUser.role === 'admin'
         );
 
         userTxs.forEach(tx => {
           const prevStatus = lastKnownStatusesRef.current.get(tx.id);
-          
-          if (prevStatus && prevStatus !== tx.status) {
-            // Status changed!
-            const lotRef = tx.lot_reference_id || tx.id.slice(0, 8);
+          const lotRef = tx.lot_reference_id || tx.id.slice(0, 8);
+
+          // 1. Detect newly assigned transaction request to this recycler facility
+          if (!prevStatus && !isInitialTxCheckRef.current) {
+            const isAssignedToThisRecycler = isRecycler && (
+              tx.recycler_id === currentUser.id ||
+              tx.recycler_id === 'rec-1' ||
+              tx.recycler_name?.toLowerCase().includes('ecorecycle')
+            );
+
+            if (isAssignedToThisRecycler) {
+              notifyUser({
+                title: lang === 'hi' 
+                  ? 'नया लॉट अनुरोध असाइन हुआ' 
+                  : lang === 'mr' 
+                  ? 'नवीन लॉट विनंती सोपवली' 
+                  : lang === 'ta' 
+                  ? 'புதிய பரிவர்த்தனை கோரிக்கை ஒதுக்கப்பட்டது' 
+                  : 'New Transaction Request Assigned',
+                message: lang === 'hi'
+                  ? `${tx.scrapper_name} ने नया ${tx.category} लॉट (${tx.estimated_weight} किग्रा) आपकी रिसाइकलिंग सुविधा को भेजा है।`
+                  : lang === 'mr'
+                  ? `${tx.scrapper_name} ने नवीन ${tx.category} लॉट (${tx.estimated_weight} किलो) तुमच्या सुविधेला पाठवला आहे.`
+                  : lang === 'ta'
+                  ? `${tx.scrapper_name} புதிய ${tx.category} லாட்டை (${tx.estimated_weight} கிலோ) உங்கள் வசதிக்கு ஒதுக்கியுள்ளார்.`
+                  : `${tx.scrapper_name} assigned new ${tx.category} lot (${tx.estimated_weight} kg) to your facility.`,
+                type: 'assignment',
+                lotId: tx.id,
+                lotReferenceId: lotRef,
+                actionLabel: lang === 'hi' ? 'लॉट देखें' : lang === 'mr' ? 'लॉट पहा' : lang === 'ta' ? 'லாட்டை பார்' : 'Inspect Lot',
+                onAction: () => onNavigateToLot?.(tx.id)
+              });
+            }
+          } else if (prevStatus && prevStatus !== tx.status) {
+            // 2. Existing transaction status changed!
             const verifiedWeight = tx.actual_weight || tx.estimated_weight;
             const payout = tx.final_payout || Math.round(verifiedWeight * tx.offered_rate_per_kg);
 
@@ -260,21 +290,75 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
           // Update ref
           lastKnownStatusesRef.current.set(tx.id, tx.status);
         });
+
+        isInitialTxCheckRef.current = false;
       } catch (err) {
         // silent polling catch
       }
     };
 
+    // Monitor incoming chats across the app
+    const checkChats = async () => {
+      try {
+        const chats = await api.getChats({ user_id: currentUser.id });
+        if (!isMounted || !chats || !Array.isArray(chats)) return;
+
+        if (isInitialChatCheckRef.current) {
+          chats.forEach(c => lastKnownChatIdsRef.current.add(c.id));
+          isInitialChatCheckRef.current = false;
+          return;
+        }
+
+        chats.forEach(chat => {
+          if (!lastKnownChatIdsRef.current.has(chat.id)) {
+            lastKnownChatIdsRef.current.add(chat.id);
+            // Only alert if incoming message (from someone else)
+            if (chat.sender_id !== currentUser.id) {
+              notifyUser({
+                title: lang === 'hi'
+                  ? `${chat.sender_name} से नया संदेश`
+                  : lang === 'mr'
+                  ? `${chat.sender_name} कडून नवीन संदेश`
+                  : lang === 'ta'
+                  ? `${chat.sender_name} இடமிருந்து புதிய செய்தி`
+                  : `New Message from ${chat.sender_name}`,
+                message: chat.message.length > 80 ? chat.message.slice(0, 80) + '...' : chat.message,
+                type: 'chat',
+                lotReferenceId: chat.lot_reference_id,
+                actionLabel: loc.openChat,
+                onAction: () => {
+                  if (onOpenChatWithUser) {
+                    onOpenChatWithUser({
+                      id: chat.sender_id,
+                      name: chat.sender_name,
+                      role: chat.sender_role || 'scrapper'
+                    });
+                  }
+                }
+              });
+            }
+          }
+        });
+      } catch (err) {
+        // silent catch
+      }
+    };
+
     // Initial check
     checkTransactions();
+    checkChats();
 
-    // Poll every 5 seconds for status updates
-    const interval = setInterval(checkTransactions, 5000);
+    // Poll every 5 seconds for status updates and chats
+    const interval = setInterval(() => {
+      checkTransactions();
+      checkChats();
+    }, 5000);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [currentUser, lang, loc, onNavigateToLot]);
+  }, [currentUser, lang, loc, onNavigateToLot, onOpenChatWithUser]);
 
   const dismissToast = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -286,8 +370,11 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
 
   const getIcon = (type: AppNotification['type']) => {
     switch (type) {
+      case 'assignment':
       case 'connection':
         return <UserPlus className="w-5 h-5 text-blue-600 shrink-0" />;
+      case 'chat':
+        return <MessageSquare className="w-5 h-5 text-emerald-600 shrink-0" />;
       case 'weight':
         return <Scale className="w-5 h-5 text-amber-600 shrink-0" />;
       case 'payment':
@@ -303,8 +390,11 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
 
   const getBadgeStyle = (type: AppNotification['type']) => {
     switch (type) {
+      case 'assignment':
       case 'connection':
         return 'border-blue-300 bg-blue-50/95';
+      case 'chat':
+        return 'border-emerald-300 bg-emerald-50/95';
       case 'weight':
         return 'border-amber-300 bg-amber-50/95';
       case 'payment':

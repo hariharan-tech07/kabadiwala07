@@ -2,14 +2,116 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        // Mock WebSocket for Vite HMR in cloud preview where HMR is disabled
+        if (typeof window !== 'undefined') {
+          var NativeWebSocket = window.WebSocket;
+          if (NativeWebSocket) {
+            var MockWebSocket = function(url, protocols) {
+              var isViteHmr = false;
+              if (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1 || url.indexOf('/@vite') !== -1)) {
+                isViteHmr = true;
+              }
+              if (protocols === 'vite-hmr' || (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1)) {
+                isViteHmr = true;
+              }
+              if (isViteHmr) {
+                var dummy = new EventTarget();
+                dummy.url = url;
+                dummy.readyState = 1; // OPEN
+                dummy.CONNECTING = 0;
+                dummy.OPEN = 1;
+                dummy.CLOSING = 2;
+                dummy.CLOSED = 3;
+                dummy.binaryType = 'blob';
+                dummy.send = function() {};
+                dummy.close = function() {
+                  dummy.readyState = 3;
+                  if (typeof dummy.onclose === 'function') dummy.onclose(new Event('close'));
+                  dummy.dispatchEvent(new Event('close'));
+                };
+                setTimeout(function() {
+                  if (typeof dummy.onopen === 'function') dummy.onopen(new Event('open'));
+                  dummy.dispatchEvent(new Event('open'));
+                }, 0);
+                return dummy;
+              }
+              return new NativeWebSocket(url, protocols);
+            };
+            MockWebSocket.prototype = NativeWebSocket.prototype;
+            MockWebSocket.CONNECTING = 0;
+            MockWebSocket.OPEN = 1;
+            MockWebSocket.CLOSING = 2;
+            MockWebSocket.CLOSED = 3;
+            window.WebSocket = MockWebSocket;
+          }
+
+          // Prevent unhandled promise rejections or error events from Vite HMR
+          window.addEventListener('unhandledrejection', function(event) {
+            var reason = event && event.reason;
+            var msg = reason ? (reason.message || String(reason)) : '';
+            if (msg.indexOf('vite') !== -1 || msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite-hmr') !== -1) {
+              event.preventDefault();
+            }
+          });
+
+          // Suppress expected [vite] HMR websocket connection errors in AI Studio cloud iframe
+          var origConsoleError = console.error;
+          console.error = function() {
+            var first = arguments[0];
+            if (
+              first === '[vite]' ||
+              (typeof first === 'string' && (
+                first.indexOf('[vite]') !== -1 ||
+                first.indexOf('vite-plugin-pwa') !== -1 ||
+                first.indexOf('vite-hmr') !== -1 ||
+                first.indexOf('failed to connect to websocket') !== -1
+              ))
+            ) {
+              return;
+            }
+            return origConsoleError.apply(console, arguments);
+          };
+
+          var origConsoleWarn = console.warn;
+          console.warn = function() {
+            var first = arguments[0];
+            if (
+              first === '[vite]' ||
+              (typeof first === 'string' && (
+                first.indexOf('[vite]') !== -1 ||
+                first.indexOf('vite-plugin-pwa') !== -1 ||
+                first.indexOf('vite-hmr') !== -1
+              ))
+            ) {
+              return;
+            }
+            return origConsoleWarn.apply(console, arguments);
+          };
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Kabadiwala Connect - E-Waste Circular Network</title>
     <meta name="description" content="Decoupled full-stack platform bridging informal scrap collectors with authorized recyclers via AI material identification, dynamic pricing, geolocation matching, and traceability." />
+    
+    <!-- Android & PWA App Metadata -->
+    <meta name="theme-color" content="#065f46" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kabadiwala" />
+    <meta name="application-name" content="Kabadiwala" />
+    <meta name="msapplication-TileColor" content="#065f46" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+
     <meta property="og:title" content="Kabadiwala Connect - E-Waste Circular Network" />
     <meta property="og:description" content="Decoupled full-stack platform bridging informal scrap collectors with authorized recyclers via AI material identification, dynamic pricing, geolocation matching, and traceability." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
   <body>
     <div id="root"></div>
