@@ -51,7 +51,7 @@
           window.addEventListener('unhandledrejection', function(event) {
             var reason = event && event.reason;
             var msg = reason ? (reason.message || String(reason)) : '';
-            if (msg.indexOf('vite') !== -1 || msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite-hmr') !== -1) {
+            if (msg.indexOf('vite') !== -1 || msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite-hmr') !== -1 || msg.indexOf('send was called before connect') !== -1) {
               event.preventDefault();
             }
           });
@@ -59,15 +59,19 @@
           // Suppress expected [vite] HMR websocket connection errors in AI Studio cloud iframe
           var origConsoleError = console.error;
           console.error = function() {
-            var first = arguments[0];
+            var allArgs = '';
+            for (var i = 0; i < arguments.length; i++) {
+              var arg = arguments[i];
+              if (arg) {
+                allArgs += ' ' + (arg.message || arg.stack || (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)));
+              }
+            }
             if (
-              first === '[vite]' ||
-              (typeof first === 'string' && (
-                first.indexOf('[vite]') !== -1 ||
-                first.indexOf('vite-plugin-pwa') !== -1 ||
-                first.indexOf('vite-hmr') !== -1 ||
-                first.indexOf('failed to connect to websocket') !== -1
-              ))
+              allArgs.indexOf('[vite]') !== -1 ||
+              allArgs.indexOf('vite-plugin-pwa') !== -1 ||
+              allArgs.indexOf('vite-hmr') !== -1 ||
+              allArgs.indexOf('failed to connect to websocket') !== -1 ||
+              allArgs.indexOf('send was called before connect') !== -1
             ) {
               return;
             }
@@ -76,14 +80,18 @@
 
           var origConsoleWarn = console.warn;
           console.warn = function() {
-            var first = arguments[0];
+            var allArgs = '';
+            for (var i = 0; i < arguments.length; i++) {
+              var arg = arguments[i];
+              if (arg) {
+                allArgs += ' ' + (arg.message || arg.stack || (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)));
+              }
+            }
             if (
-              first === '[vite]' ||
-              (typeof first === 'string' && (
-                first.indexOf('[vite]') !== -1 ||
-                first.indexOf('vite-plugin-pwa') !== -1 ||
-                first.indexOf('vite-hmr') !== -1
-              ))
+              allArgs.indexOf('[vite]') !== -1 ||
+              allArgs.indexOf('vite-plugin-pwa') !== -1 ||
+              allArgs.indexOf('vite-hmr') !== -1 ||
+              allArgs.indexOf('send was called before connect') !== -1
             ) {
               return;
             }

@@ -6,6 +6,8 @@ import { Header } from './components/Header';
 import { AuthModal } from './components/AuthModal';
 import { ScrapperDashboard, ScrapperMenuTab } from './components/scrapper/ScrapperDashboard';
 import { RecyclerDashboard, RecyclerMenuTab } from './components/recycler/RecyclerDashboard';
+import { HouseholdDashboard } from './components/household/HouseholdDashboard';
+import { HouseholdMenuTab } from './types';
 import { AdminDashboard, AdminMenuTab } from './components/admin/AdminDashboard';
 import { AdminMasterControlBar, AdminActiveMode } from './components/admin/AdminMasterControlBar';
 import { ChatDrawer } from './components/ChatDrawer';

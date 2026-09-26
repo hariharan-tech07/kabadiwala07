@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { User, UserRole, VernacularLang } from '../types';
+import { User, UserRole, VernacularLang, CpcbEprCertificateExtraction } from '../types';
 import { api } from '../api/client';
 import {
   ShieldCheck, Smartphone, Lock, AlertCircle, ArrowRight, CheckCircle2,
   Building2, ShieldAlert, KeyRound, RefreshCw, Check, Globe, MapPin,
   User as UserIcon, Phone, FileCheck, Eye, EyeOff, Truck, ArrowLeft,
-  ChevronRight, UserCheck, LogIn, UserPlus, Zap, Download, Laptop, X
+  ChevronRight, UserCheck, LogIn, UserPlus, Zap, Download, Laptop, X,
+  Sparkles, UploadCloud, FileText, Code
 } from 'lucide-react';
 import { AndroidAppModal } from './common/AndroidAppModal';
 
@@ -486,6 +487,72 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
   const [recCpcbNumber, setRecCpcbNumber] = useState('');
   const [recUsername, setRecUsername] = useState('');
   const [recPassword, setRecPassword] = useState('');
+
+  // Document Verification Assistant state (Recycler Onboarding)
+  const [certFile, setCertFile] = useState<{ name: string; size: number } | null>(null);
+  const [certVerifying, setCertVerifying] = useState(false);
+  const [certExtraction, setCertExtraction] = useState<CpcbEprCertificateExtraction | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
+
+  const handleVerifyCertificateFile = async (file: File) => {
+    setCertFile({ name: file.name, size: file.size });
+    setCertVerifying(true);
+    setError(null);
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+
+      const extraction = await api.verifyCpcbCertificate({
+        fileBase64: base64Data,
+        mimeType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+        fileName: file.name
+      });
+
+      setCertExtraction(extraction);
+
+      if (extraction.certificate_number) setRecCpcbNumber(extraction.certificate_number);
+      if (extraction.entity_name) setRecEntityName(extraction.entity_name);
+      if (extraction.entity_address) setRecLocation(extraction.entity_address);
+      if (extraction.authorized_signatory_name && !recRepName) setRecRepName(extraction.authorized_signatory_name);
+
+      setSuccessInfo(`CPCB EPR Certificate verified! Confidence: ${extraction.extraction_confidence.toUpperCase()}. Registered details populated.`);
+    } catch (err: any) {
+      setError(`Certificate verification notice: ${err?.message || 'Verification could not extract fields'}`);
+    } finally {
+      setCertVerifying(false);
+    }
+  };
+
+  const handleLoadSampleCertificate = async () => {
+    setCertFile({ name: 'CPCB_EPR_Registration_Certificate_2026.pdf', size: 142850 });
+    setCertVerifying(true);
+    setError(null);
+    try {
+      const extraction = await api.verifyCpcbCertificate({
+        fileName: 'CPCB_EPR_Registration_Certificate_2026.pdf',
+        mimeType: 'application/pdf',
+        fileBase64: 'JVBERi0xLjQK'
+      });
+
+      setCertExtraction(extraction);
+
+      if (extraction.certificate_number) setRecCpcbNumber(extraction.certificate_number);
+      if (extraction.entity_name) setRecEntityName(extraction.entity_name);
+      if (extraction.entity_address) setRecLocation(extraction.entity_address);
+      if (extraction.authorized_signatory_name) setRecRepName(extraction.authorized_signatory_name);
+
+      setSuccessInfo('Official CPCB EPR Registration Certificate loaded & extracted by AI Assistant!');
+    } catch (err: any) {
+      setError(`Sample extraction error: ${err.message}`);
+    } finally {
+      setCertVerifying(false);
+    }
+  };
 
   // 3. Admin Form State (Repeatedly asked on every login: Name, Mobile Number, Password)
   const [adminName, setAdminName] = useState('');
@@ -1781,9 +1848,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
                   </div>
 
                   <div>
-                    <label htmlFor="rec-login-password" className="block text-sm font-bold text-slate-800 mb-1">
-                      {at.passwordLabel} <span className="text-blue-600">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label htmlFor="rec-login-password" className="block text-sm font-bold text-slate-800">
+                        {at.passwordLabel} <span className="text-blue-600">*</span>
+                      </label>
+                      <span className="text-[11px] text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md font-medium">
+                        Default Password: <strong className="font-mono font-bold text-blue-900">password123</strong>
+                      </span>
+                    </div>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                       <input
@@ -1801,6 +1873,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
                         className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 1-Tap Quick Fill Demo Recycler Accounts */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Forgot Password? 1-Tap Demo Facilities:</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">PIN: password123</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecyclerUsername('ecorecycle');
+                          setRecyclerPassword('password123');
+                          setSuccessInfo('Auto-filled EcoRecycle Solutions credentials! Click Sign In.');
+                          setError(null);
+                        }}
+                        className="p-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition-all cursor-pointer group"
+                      >
+                        <div className="font-bold text-slate-800 group-hover:text-blue-700 truncate">EcoRecycle</div>
+                        <div className="text-[10px] text-slate-500 font-mono">ecorecycle</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecyclerUsername('greenmetal');
+                          setRecyclerPassword('password123');
+                          setSuccessInfo('Auto-filled GreenMetals credentials! Click Sign In.');
+                          setError(null);
+                        }}
+                        className="p-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition-all cursor-pointer group"
+                      >
+                        <div className="font-bold text-slate-800 group-hover:text-blue-700 truncate">GreenMetals</div>
+                        <div className="text-[10px] text-slate-500 font-mono">greenmetal</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecyclerUsername('chennaicircular');
+                          setRecyclerPassword('password123');
+                          setSuccessInfo('Auto-filled Chennai Circular credentials! Click Sign In.');
+                          setError(null);
+                        }}
+                        className="p-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition-all cursor-pointer group"
+                      >
+                        <div className="font-bold text-slate-800 group-hover:text-blue-700 truncate">Chennai Circular</div>
+                        <div className="text-[10px] text-slate-500 font-mono">chennaicircular</div>
                       </button>
                     </div>
                   </div>
@@ -1834,6 +1958,163 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
                     <p className="text-blue-800 text-xs mt-0.5">
                       {at.recyclerRegisterNotice}
                     </p>
+                  </div>
+
+                  {/* AI Document-Verification Assistant for Recycler Onboarding */}
+                  <div className="p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 border border-blue-800/60 rounded-2xl text-white space-y-3 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 shrink-0">
+                          <Sparkles className="w-4 h-4 animate-pulse" />
+                        </div>
+                        <div>
+                          <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                            <span>CPCB Document-Verification Assistant</span>
+                            <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-mono">
+                              EPR Parser
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-300">
+                            Upload CPCB EPR Registration Certificate (PDF or Image) to extract information automatically.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload Controls */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      {/* File Input */}
+                      <label className="flex items-center justify-center gap-2 p-2.5 bg-white/10 hover:bg-white/15 border border-white/20 rounded-xl cursor-pointer text-xs font-semibold transition-all group text-center">
+                        <UploadCloud className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
+                        <span className="truncate">
+                          {certFile ? certFile.name : 'Upload EPR Certificate (PDF / Image)'}
+                        </span>
+                        <input
+                          type="file"
+                          accept=".pdf,image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleVerifyCertificateFile(file);
+                          }}
+                        />
+                      </label>
+
+                      {/* 1-Click Demo Sample */}
+                      <button
+                        type="button"
+                        onClick={handleLoadSampleCertificate}
+                        disabled={certVerifying}
+                        className="flex items-center justify-center gap-1.5 p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Load Demo CPCB Certificate</span>
+                      </button>
+                    </div>
+
+                    {/* Verifying Spinner */}
+                    {certVerifying && (
+                      <div className="p-3 bg-blue-950/80 border border-blue-500/40 rounded-xl flex items-center gap-2 text-xs text-blue-200">
+                        <RefreshCw className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                        <span>AI Assistant extracting CPCB EPR certificate fields...</span>
+                      </div>
+                    )}
+
+                    {/* Extracted Certificate Card */}
+                    {certExtraction && (
+                      <div className="p-3.5 bg-slate-900/90 border border-blue-700/50 rounded-xl space-y-2.5 text-xs">
+                        <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                          <div className="flex items-center gap-2">
+                            <FileCheck className="w-4 h-4 text-emerald-400" />
+                            <span className="font-bold text-white">Extracted EPR Certificate</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                              certExtraction.extraction_confidence === 'high'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : certExtraction.extraction_confidence === 'medium'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            }`}>
+                              Confidence: {certExtraction.extraction_confidence}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowRawJson(!showRawJson)}
+                              className="text-[10px] text-blue-300 hover:text-white underline font-mono cursor-pointer"
+                            >
+                              {showRawJson ? 'Hide JSON' : 'View JSON'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Grid of Extracted Attributes */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-slate-400">Certificate No:</span>{' '}
+                            <strong className="text-white font-mono">{certExtraction.certificate_number || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Issue Date:</span>{' '}
+                            <strong className="text-white font-mono">{certExtraction.issue_date || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Entity Category:</span>{' '}
+                            <strong className="text-blue-300">{certExtraction.entity_category || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Waste Stream:</span>{' '}
+                            <strong className="text-emerald-300">{certExtraction.waste_stream || 'N/A'}</strong>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <span className="text-slate-400">Entity Name:</span>{' '}
+                            <strong className="text-white">{certExtraction.entity_name || 'N/A'}</strong>
+                          </div>
+                          <div className="sm:col-span-2">
+                            <span className="text-slate-400">Address:</span>{' '}
+                            <span className="text-slate-200">{certExtraction.entity_address || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Signatory:</span>{' '}
+                            <span className="text-white">{certExtraction.authorized_signatory_name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Designation:</span>{' '}
+                            <span className="text-slate-300">{certExtraction.authorized_signatory_designation || 'N/A'}</span>
+                          </div>
+                          {certExtraction.validity_period_years !== null && (
+                            <div>
+                              <span className="text-slate-400">Validity:</span>{' '}
+                              <span className="text-emerald-300 font-bold">{certExtraction.validity_period_years} Years</span>
+                            </div>
+                          )}
+                          {certExtraction.eee_or_item_codes?.length > 0 && (
+                            <div className="sm:col-span-2 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-slate-400">Item Codes:</span>
+                              {certExtraction.eee_or_item_codes.map((code) => (
+                                <span key={code} className="px-1.5 py-0.2 bg-blue-900/60 border border-blue-500/40 rounded text-[10px] font-mono text-blue-200">
+                                  {code}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        {certExtraction.notes && (
+                          <div className="p-2 bg-black/40 border border-slate-700/60 rounded text-[11px] text-slate-300">
+                            <span className="text-slate-400 font-bold">Notes:</span> {certExtraction.notes}
+                          </div>
+                        )}
+
+                        {/* Raw JSON View */}
+                        {showRawJson && (
+                          <pre className="p-2.5 bg-black/70 border border-slate-800 rounded-lg text-[10px] font-mono text-emerald-400 overflow-x-auto max-h-48">
+                            {JSON.stringify(certExtraction, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Representative Name */}

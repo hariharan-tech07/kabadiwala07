@@ -14,7 +14,9 @@ import {
   ScrapItem,
   PaymentDetails,
   PaymentMode,
-  PaymentStatus
+  PaymentStatus,
+  HouseholdPickupRequest,
+  UserRole
 } from '../src/types';
 import { syncDocToFirestore, removeDocFromFirestore, seedFirestoreIfEmpty } from './firestore';
 
@@ -28,6 +30,7 @@ interface DatabaseData {
   complaints: Complaint[];
   legal_cases: LegalCase[];
   audit_logs: AuditLogEntry[];
+  household_pickups: HouseholdPickupRequest[];
 }
 
 const DB_FILE_PATH = path.join(process.cwd(), 'database.json');
@@ -239,6 +242,71 @@ const INITIAL_USERS: (User & { password?: string })[] = [
     longitude: 77.2090,
     status: 'Active',
     created_at: '2026-01-01T00:00:00Z'
+  },
+  {
+    id: 'usr-household-1',
+    username: 'priya',
+    password: 'password123',
+    name: 'Priya Sharma (Household)',
+    role: 'household',
+    location: 'Indiranagar, Bengaluru, Karnataka',
+    phone: '+91 98450 77665',
+    verified: true,
+    latitude: 12.9784,
+    longitude: 77.6408,
+    status: 'Active',
+    created_at: '2026-08-10T10:00:00Z',
+    sales_frequency: 'periodical'
+  }
+];
+
+const INITIAL_HOUSEHOLD_PICKUPS: HouseholdPickupRequest[] = [
+  {
+    id: 'hh-pickup-101',
+    household_id: 'usr-household-1',
+    household_name: 'Priya Sharma (Household)',
+    household_phone: '+91 98450 77665',
+    household_address: 'Flat 402, Green Glen Layout, Indiranagar, Bengaluru',
+    household_gps: { latitude: 12.9784, longitude: 77.6408 },
+    scrapper_id: 'usr-scrapper-1',
+    scrapper_name: 'Ramesh Kumar',
+    scrapper_phone: '+91 98450 12345',
+    category: 'Home Appliances & Broken Electronics',
+    items_description: '1 Old Microwave Oven, 2 Broken Ceiling Fans, 1 Tablet with swollen battery, bundle of copper cables',
+    estimated_weight_kg: 18,
+    actual_weight_kg: 19.5,
+    offered_rate_per_kg: 48,
+    total_payout: 936,
+    pickup_date: '2026-09-24',
+    preferred_time_slot: 'Morning (10:00 AM - 1:00 PM)',
+    status: 'COMPLETED',
+    scrapper_resale_status: 'SOLD_TO_CIRCULAR_STREAM',
+    payment_mode: 'UPI',
+    payment_reference: 'UPI/2026/0924/883921',
+    notes: 'Scrapper arrived with certified digital scale, weighed at doorstep, paid via UPI.',
+    created_at: '2026-09-24T09:15:00Z',
+    completed_at: '2026-09-24T11:45:00Z'
+  },
+  {
+    id: 'hh-pickup-102',
+    household_id: 'usr-household-1',
+    household_name: 'Priya Sharma (Household)',
+    household_phone: '+91 98450 77665',
+    household_address: 'Flat 402, Green Glen Layout, Indiranagar, Bengaluru',
+    household_gps: { latitude: 12.9784, longitude: 77.6408 },
+    scrapper_id: 'usr-scrapper-1',
+    scrapper_name: 'Ramesh Kumar',
+    scrapper_phone: '+91 98450 12345',
+    category: 'Smartphones & Computer Parts',
+    items_description: '2 Dead Android phones, 1 Old Laptop, 3 Charger cords, 1 Desktop CPU cabinet',
+    estimated_weight_kg: 12,
+    pickup_date: '2026-09-27',
+    preferred_time_slot: 'Afternoon (2:00 PM - 5:00 PM)',
+    status: 'ACCEPTED',
+    scrapper_resale_status: 'COLLECTED_AT_DOORSTEP',
+    payment_mode: 'UPI',
+    notes: 'Ramesh confirmed pickup for Sunday afternoon.',
+    created_at: '2026-09-25T14:30:00Z'
   }
 ];
 
@@ -963,7 +1031,8 @@ class DatabaseStore {
           chats: parsed.chats || INITIAL_CHATS,
           complaints: parsed.complaints || INITIAL_COMPLAINTS,
           legal_cases: parsed.legal_cases || INITIAL_LEGAL_CASES,
-          audit_logs: parsed.audit_logs || INITIAL_AUDIT_LOGS
+          audit_logs: parsed.audit_logs || INITIAL_AUDIT_LOGS,
+          household_pickups: parsed.household_pickups || INITIAL_HOUSEHOLD_PICKUPS
         };
       }
     } catch (err) {
@@ -979,7 +1048,8 @@ class DatabaseStore {
       chats: INITIAL_CHATS,
       complaints: INITIAL_COMPLAINTS,
       legal_cases: INITIAL_LEGAL_CASES,
-      audit_logs: INITIAL_AUDIT_LOGS
+      audit_logs: INITIAL_AUDIT_LOGS,
+      household_pickups: INITIAL_HOUSEHOLD_PICKUPS
     };
     this.saveToDisk(defaultData);
     return defaultData;
@@ -1105,6 +1175,73 @@ class DatabaseStore {
     return null;
   }
 
+  updateUserRole(userId: string, role: UserRole, sales_frequency?: 'regular' | 'periodical') {
+    const user = this.data.users.find(u => u.id === userId);
+    if (user) {
+      user.role = role;
+      if (sales_frequency) {
+        user.sales_frequency = sales_frequency;
+      }
+      this.saveToDisk();
+      const { password, ...safe } = user;
+      syncDocToFirestore('users', user.id, safe);
+      return safe;
+    }
+    return null;
+  }
+
+  // Household Pickups & Doorstep Requests
+  getHouseholdPickups(householdId?: string, scrapperId?: string) {
+    if (!this.data.household_pickups) {
+      this.data.household_pickups = [...INITIAL_HOUSEHOLD_PICKUPS];
+    }
+    return this.data.household_pickups.filter(p => {
+      if (householdId && p.household_id !== householdId) return false;
+      if (scrapperId && p.scrapper_id !== scrapperId) return false;
+      return true;
+    });
+  }
+
+  createHouseholdPickup(pickup: HouseholdPickupRequest) {
+    if (!this.data.household_pickups) {
+      this.data.household_pickups = [...INITIAL_HOUSEHOLD_PICKUPS];
+    }
+    this.data.household_pickups.unshift(pickup);
+    this.saveToDisk();
+    syncDocToFirestore('household_pickups', pickup.id, pickup);
+    return pickup;
+  }
+
+  updateHouseholdPickup(id: string, updates: Partial<HouseholdPickupRequest>) {
+    if (!this.data.household_pickups) {
+      this.data.household_pickups = [...INITIAL_HOUSEHOLD_PICKUPS];
+    }
+    const idx = this.data.household_pickups.findIndex(p => p.id === id);
+    if (idx !== -1) {
+      this.data.household_pickups[idx] = { ...this.data.household_pickups[idx], ...updates };
+      this.saveToDisk();
+      syncDocToFirestore('household_pickups', id, this.data.household_pickups[idx]);
+      return this.data.household_pickups[idx];
+    }
+    return null;
+  }
+
+  getScrappersForHousehold() {
+    return this.data.users
+      .filter(u => u.role === 'scrapper' && u.status === 'Active')
+      .map(u => {
+        const { password, ...safe } = u;
+        return {
+          ...safe,
+          rating: 4.85,
+          pickups_completed: 48,
+          vehicle: 'Electric Cargo Loader (Certified)',
+          operating_hours: '8:00 AM - 7:30 PM',
+          service_radius_km: 8
+        };
+      });
+  }
+
   deleteUser(userId: string, adminUser?: { id: string; name: string }, reason?: string) {
     const target = this.data.users.find(u => u.id === userId);
     if (target && adminUser) {
@@ -1203,7 +1340,7 @@ class DatabaseStore {
       payment_mode: paymentMode,
       amount: estimatedPayout,
       status: paymentStatus,
-      paid_at: paymentStatus === 'PAID' ? new Date().toISOString() : undefined,
+      ...(paymentStatus === 'PAID' ? { paid_at: new Date().toISOString() } : {}),
       ...(paymentMode === 'OFFLINE_PAYMENT' ? {
         offline_voucher_no: `OFF-VCHR-${Date.now().toString().slice(-6)}`,
         offline_mode: 'PHYSICAL_SLIP',
@@ -1289,21 +1426,21 @@ class DatabaseStore {
       amount: finalAmount,
       status: 'PAID',
       paid_at: nowIso,
-      upi_id: paymentData.upi_id || tx.payment_details?.upi_id,
-      upi_txn_id: paymentData.upi_txn_id || (paymentData.payment_mode.includes('UPI') ? `UPI-TXN-${Date.now().toString().slice(-6)}` : undefined),
       upi_app: paymentData.upi_app || 'UPI Instant Pay',
       cash_collected_by: paymentData.cash_collected_by || 'Authorized Logistics Agent',
-      cash_receipt_no: paymentData.cash_receipt_no || (paymentData.payment_mode.includes('CASH') ? `REC-${Date.now().toString().slice(-6)}` : undefined),
-      cash_tendered: paymentData.cash_tendered,
-      cash_notes: paymentData.cash_notes,
-      offline_voucher_no: paymentData.offline_voucher_no || (paymentData.payment_mode === 'OFFLINE_PAYMENT' ? `OFF-VCHR-${Date.now().toString().slice(-6)}` : undefined),
       offline_mode: paymentData.offline_mode || 'PHYSICAL_SLIP',
       offline_verified_by: paymentData.offline_verified_by || 'CPCB Field Scale Officer',
-      offline_witness_contact: paymentData.offline_witness_contact,
       offline_notes: paymentData.offline_notes || 'Handover reconciled under offline ledger standard.',
       offline_synced_at: nowIso,
-      bank_account_last4: paymentData.bank_account_last4,
-      bank_ref_no: paymentData.bank_ref_no
+      ...(paymentData.upi_id || tx.payment_details?.upi_id ? { upi_id: paymentData.upi_id || tx.payment_details?.upi_id } : {}),
+      ...(paymentData.upi_txn_id || paymentData.payment_mode.includes('UPI') ? { upi_txn_id: paymentData.upi_txn_id || `UPI-TXN-${Date.now().toString().slice(-6)}` } : {}),
+      ...(paymentData.cash_receipt_no || paymentData.payment_mode.includes('CASH') ? { cash_receipt_no: paymentData.cash_receipt_no || `REC-${Date.now().toString().slice(-6)}` } : {}),
+      ...(paymentData.cash_tendered !== undefined ? { cash_tendered: paymentData.cash_tendered } : {}),
+      ...(paymentData.cash_notes ? { cash_notes: paymentData.cash_notes } : {}),
+      ...(paymentData.offline_voucher_no || paymentData.payment_mode === 'OFFLINE_PAYMENT' ? { offline_voucher_no: paymentData.offline_voucher_no || `OFF-VCHR-${Date.now().toString().slice(-6)}` } : {}),
+      ...(paymentData.offline_witness_contact ? { offline_witness_contact: paymentData.offline_witness_contact } : {}),
+      ...(paymentData.bank_account_last4 ? { bank_account_last4: paymentData.bank_account_last4 } : {}),
+      ...(paymentData.bank_ref_no ? { bank_ref_no: paymentData.bank_ref_no } : {})
     };
 
     this.saveToDisk();
@@ -1657,84 +1794,158 @@ class DatabaseStore {
     };
   }
 
-  // Generate SQLite / SQL DDL Schema
-  generateSQLiteSchemaDDL(): string {
-    return `-- Kabadiwala Connect v2 Statutory SQLite / PostgreSQL Schema
+  // Generate Production PostgreSQL / SQLite DDL Schema Migration Engine
+  generateSQLDDL(dialect: 'postgres' | 'sqlite' = 'postgres'): string {
+    const isPg = dialect === 'postgres';
+    const textType = isPg ? 'VARCHAR(255)' : 'TEXT';
+    const longTextType = isPg ? 'TEXT' : 'TEXT';
+    const numType = isPg ? 'NUMERIC(12, 2)' : 'REAL';
+    const boolType = isPg ? 'BOOLEAN' : 'INTEGER';
+    const timeType = isPg ? 'TIMESTAMP WITH TIME ZONE' : 'TEXT';
+    const defaultNow = isPg ? 'CURRENT_TIMESTAMP' : "datetime('now')";
+    const idType = isPg ? 'VARCHAR(64)' : 'TEXT';
+
+    return `-- ====================================================================
+-- KABADIWALA CONNECT v2.4.0 STATUTORY DDL MIGRATION SCRIPT
+-- Target Engine: ${isPg ? 'PostgreSQL (Cloud SQL / Supabase / Neon)' : 'SQLite 3 (FOSS / Embedded)'}
+-- Compliance Standard: CPCB E-Waste Management Rules 2022 / SIH Portal Standard
+-- Generated At: ${new Date().toISOString()}
+-- ====================================================================
+
+-- 1. USERS & STAKEHOLDERS (Aadhaar KYC, CPCB Auth, GPS Pin)
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('scrapper', 'recycler', 'admin')),
-  location TEXT,
-  phone TEXT,
-  verified INTEGER DEFAULT 0,
-  cpcb_number TEXT,
-  aadhaar_last4 TEXT,
-  latitude REAL,
-  longitude REAL,
-  status TEXT DEFAULT 'Active',
-  created_at TEXT NOT NULL
+  id ${idType} PRIMARY KEY,
+  username ${idType} UNIQUE NOT NULL,
+  name ${textType} NOT NULL,
+  role ${textType} NOT NULL ${isPg ? "CHECK (role IN ('scrapper', 'recycler', 'admin'))" : "CHECK (role IN ('scrapper', 'recycler', 'admin'))"},
+  location ${textType},
+  phone ${isPg ? 'VARCHAR(32)' : 'TEXT'},
+  verified ${boolType} DEFAULT ${isPg ? 'FALSE' : '0'},
+  cpcb_number ${idType},
+  aadhaar_last4 ${isPg ? 'VARCHAR(4)' : 'TEXT'},
+  latitude ${isPg ? 'DOUBLE PRECISION' : 'REAL'},
+  longitude ${isPg ? 'DOUBLE PRECISION' : 'REAL'},
+  status ${isPg ? 'VARCHAR(32)' : 'TEXT'} DEFAULT 'Active',
+  created_at ${timeType} DEFAULT ${defaultNow}
 );
 
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_cpcb ON users(cpcb_number);
+
+-- 2. STATUTORY SCRAP CATEGORIES & CPCB BENCHMARK FLOOR RATES
+CREATE TABLE IF NOT EXISTS materials (
+  id ${idType} PRIMARY KEY,
+  category ${textType} UNIQUE NOT NULL,
+  subcategory ${textType},
+  base_rate_per_kg ${numType} NOT NULL,
+  description ${longTextType},
+  safety_protocol ${longTextType},
+  updated_at ${timeType} DEFAULT ${defaultNow}
+);
+
+-- 3. CPCB AUTHORIZED RECYCLING FACILITIES & CAPACITIES
+CREATE TABLE IF NOT EXISTS recycler_facilities (
+  id ${idType} PRIMARY KEY,
+  user_id ${idType} REFERENCES users(id) ON DELETE CASCADE,
+  facility_name ${textType} NOT NULL,
+  cpcb_auth_number ${idType} UNIQUE NOT NULL,
+  latitude ${isPg ? 'DOUBLE PRECISION' : 'REAL'} NOT NULL,
+  longitude ${isPg ? 'DOUBLE PRECISION' : 'REAL'} NOT NULL,
+  processing_capacity_mt ${numType} NOT NULL,
+  service_radius_km ${isPg ? 'INTEGER' : 'INTEGER'} DEFAULT 25,
+  state ${textType} NOT NULL,
+  created_at ${timeType} DEFAULT ${defaultNow}
+);
+
+CREATE INDEX IF NOT EXISTS idx_recyclers_coords ON recycler_facilities(latitude, longitude);
+
+-- 4. NATIONAL TRACEABILITY LEDGER & WEIGHBRIDGE BATCH TRANSACTIONS
 CREATE TABLE IF NOT EXISTS transactions (
-  id TEXT PRIMARY KEY,
-  lot_reference_id TEXT UNIQUE NOT NULL,
-  scrapper_id TEXT NOT NULL REFERENCES users(id),
-  scrapper_name TEXT NOT NULL,
-  recycler_id TEXT NOT NULL,
-  recycler_name TEXT NOT NULL,
-  category TEXT NOT NULL,
-  declared_weight REAL NOT NULL,
-  actual_weight REAL,
-  verified_weight REAL,
-  offered_rate_per_kg REAL NOT NULL,
-  final_payout REAL,
-  status TEXT NOT NULL,
-  payment_mode TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  id ${idType} PRIMARY KEY,
+  lot_reference_id ${idType} UNIQUE NOT NULL,
+  scrapper_id ${idType} NOT NULL REFERENCES users(id),
+  scrapper_name ${textType} NOT NULL,
+  recycler_id ${idType} NOT NULL REFERENCES users(id),
+  recycler_name ${textType} NOT NULL,
+  category ${textType} NOT NULL,
+  declared_weight ${numType} NOT NULL,
+  actual_weight ${numType},
+  verified_weight ${numType},
+  offered_rate_per_kg ${numType} NOT NULL,
+  final_payout ${numType},
+  status ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  payment_mode ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  offline_voucher_no ${idType},
+  cash_receipt_no ${idType},
+  upi_txn_id ${idType},
+  collection_lat ${isPg ? 'DOUBLE PRECISION' : 'REAL'},
+  collection_lon ${isPg ? 'DOUBLE PRECISION' : 'REAL'},
+  contamination_deduction ${numType} DEFAULT 0,
+  created_at ${timeType} DEFAULT ${defaultNow}
 );
 
+CREATE INDEX IF NOT EXISTS idx_tx_lot_ref ON transactions(lot_reference_id);
+CREATE INDEX IF NOT EXISTS idx_tx_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_tx_scrapper ON transactions(scrapper_id);
+CREATE INDEX IF NOT EXISTS idx_tx_recycler ON transactions(recycler_id);
+
+-- 5. OMBUDSMAN TRIBUNAL GRIEVANCES & WEIGHT CONFLICTS
 CREATE TABLE IF NOT EXISTS complaints (
-  id TEXT PRIMARY KEY,
-  case_number TEXT UNIQUE,
-  complainant_id TEXT NOT NULL,
-  complainant_name TEXT NOT NULL,
-  complainant_role TEXT NOT NULL,
-  respondent_id TEXT NOT NULL,
-  respondent_name TEXT NOT NULL,
-  respondent_role TEXT NOT NULL,
-  lot_reference_id TEXT,
-  type TEXT,
-  description TEXT NOT NULL,
-  priority TEXT DEFAULT 'MEDIUM',
-  status TEXT NOT NULL,
-  penalty_imposed_inr REAL,
-  created_at TEXT NOT NULL
+  id ${idType} PRIMARY KEY,
+  case_number ${idType} UNIQUE,
+  complainant_id ${idType} NOT NULL REFERENCES users(id),
+  complainant_name ${textType} NOT NULL,
+  complainant_role ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  respondent_id ${idType} NOT NULL REFERENCES users(id),
+  respondent_name ${textType} NOT NULL,
+  respondent_role ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  lot_reference_id ${idType},
+  type ${textType},
+  description ${longTextType} NOT NULL,
+  priority ${isPg ? 'VARCHAR(16)' : 'TEXT'} DEFAULT 'MEDIUM',
+  status ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  penalty_imposed_inr ${numType} DEFAULT 0,
+  created_at ${timeType} DEFAULT ${defaultNow}
 );
 
+CREATE INDEX IF NOT EXISTS idx_complaints_case ON complaints(case_number);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+
+-- 6. STATUTORY SHOW-CAUSE LEGAL NOTICES (CPCB RULE 14 / EP ACT 1986)
 CREATE TABLE IF NOT EXISTS legal_cases (
-  id TEXT PRIMARY KEY,
-  case_file_number TEXT UNIQUE NOT NULL,
-  against_name TEXT NOT NULL,
-  against_entity_type TEXT NOT NULL,
-  cpcb_reg_number TEXT,
-  section_violated TEXT NOT NULL,
-  fine_amount_inr REAL NOT NULL,
-  status TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  id ${idType} PRIMARY KEY,
+  case_file_number ${idType} UNIQUE NOT NULL,
+  against_name ${textType} NOT NULL,
+  against_entity_type ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  cpcb_reg_number ${idType},
+  section_violated ${textType} NOT NULL,
+  fine_amount_inr ${numType} NOT NULL,
+  status ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  created_at ${timeType} DEFAULT ${defaultNow}
 );
 
+CREATE INDEX IF NOT EXISTS idx_legal_case_num ON legal_cases(case_file_number);
+
+-- 7. IMMUTABLE SHA-256 SYSTEM AUDIT LOGS
 CREATE TABLE IF NOT EXISTS audit_logs (
-  id TEXT PRIMARY KEY,
-  actor_name TEXT NOT NULL,
-  actor_role TEXT NOT NULL,
-  action TEXT NOT NULL,
-  entity_type TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  details TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  id ${idType} PRIMARY KEY,
+  actor_name ${textType} NOT NULL,
+  actor_role ${isPg ? 'VARCHAR(32)' : 'TEXT'} NOT NULL,
+  action ${textType} NOT NULL,
+  entity_type ${textType} NOT NULL,
+  entity_id ${idType} NOT NULL,
+  details ${longTextType} NOT NULL,
+  checksum_sha256 ${isPg ? 'VARCHAR(64)' : 'TEXT'},
+  created_at ${timeType} DEFAULT ${defaultNow}
 );
+
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
 `;
+  }
+
+  // Generate SQLite / SQL DDL Schema (backward compatibility alias)
+  generateSQLiteSchemaDDL(): string {
+    return this.generateSQLDDL('sqlite');
   }
 
   // Export Full Dataset

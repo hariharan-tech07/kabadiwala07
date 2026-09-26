@@ -52,6 +52,7 @@ interface OpenStreetMapProps {
   initialZoom?: number;
   userLocation?: { latitude: number; longitude: number; label?: string };
   facilities?: any[];
+  hideFitAll?: boolean;
 }
 
 // Calculate distance in km between two lat/lon points (Haversine formula)
@@ -91,7 +92,8 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
   onOpenChat,
   initialCenter,
   initialZoom = 13,
-  userLocation
+  userLocation,
+  hideFitAll = false
 }) => {
   const safeUser: User = currentUser || {
     id: 'user_fallback',
@@ -110,6 +112,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const selfMarkerRef = useRef<L.Marker | null>(null);
+  const inspectedMarkerRef = useRef<L.Marker | null>(null);
 
   // Prevent fitBounds from overriding manual "Locate Me" flyTo
   const skipNextFitBoundsRef = useRef<boolean>(false);
@@ -146,6 +149,21 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     }
     return [13.0315, 77.5210];
   });
+
+  const myCoordsRef = useRef<[number, number]>(myCoords);
+  useEffect(() => {
+    myCoordsRef.current = myCoords;
+  }, [myCoords]);
+
+  // Clicked location inspector state (does NOT move myCoords)
+  const [inspectedLocation, setInspectedLocation] = useState<{
+    lat: number;
+    lon: number;
+    name: string;
+    address: string;
+    distanceKm?: number;
+    loading?: boolean;
+  } | null>(null);
 
   const [locationLabel, setLocationLabel] = useState<string>(() => {
     if (userLocation?.label) return userLocation.label;
@@ -250,36 +268,101 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       map.invalidateSize();
     }, 150);
 
-    // Interactive Pin Drop: Click anywhere on map to position yourself
+    // Interactive Map Inspector: Click anywhere to see the location name & address
+    // Crucial: The user's own location is NOT moved or pinned to the clicked point!
     const onMapClick = async (e: L.LeafletMouseEvent) => {
       const lat = Math.round(e.latlng.lat * 10000) / 10000;
       const lon = Math.round(e.latlng.lng * 10000) / 10000;
-      skipNextFitBoundsRef.current = true;
-      setMyCoords([lat, lon]);
-      setLocationSource('manual');
-      setLocStatus('Pinning clicked map position...');
+
+      const currentPos = myCoordsRef.current;
+      const dist = currentPos ? calculateDistanceKm(currentPos[0], currentPos[1], lat, lon) : undefined;
+
+      setInspectedLocation({
+        lat,
+        lon,
+        name: 'Locating place name...',
+        address: `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+        distanceKm: dist,
+        loading: true
+      });
+      setLocStatus(`Inspecting: ${lat.toFixed(4)}, ${lon.toFixed(4)}...`);
 
       try {
         const geoInfo = await api.reverseGeocode(lat, lon);
         const place =
           geoInfo?.name ||
-          (geoInfo?.display_name ? geoInfo.display_name.split(',').slice(0, 3).join(',') : '') ||
-          `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-        setLocationLabel(`${place} (Map Pin)`);
-        setLocStatus(`Pinned: ${place}`);
+          (geoInfo?.display_name ? geoInfo.display_name.split(',').slice(0, 3).join(', ') : '') ||
+          `Point (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        const fullAddress = geoInfo?.display_name || place;
 
-        localStorage.setItem('kc_user_pinned_coords', JSON.stringify({
-          latitude: lat,
-          longitude: lon,
-          label: `${place} (Map Pin)`
-        }));
+        setInspectedLocation({
+          lat,
+          lon,
+          name: place,
+          address: fullAddress,
+          distanceKm: dist,
+          loading: false
+        });
+        setLocStatus(`Location Name: ${place}`);
 
-        api.updateUserLocation(safeUser.id, lat, lon, place).catch(console.warn);
+        // Update or place inspected marker on map
+        if (mapInstanceRef.current) {
+          if (inspectedMarkerRef.current) {
+            mapInstanceRef.current.removeLayer(inspectedMarkerRef.current);
+            inspectedMarkerRef.current = null;
+          }
+
+          const inspectedHtml = `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div style="background: #0f172a; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11px; border: 1.5px solid #38bdf8; box-shadow: 0 4px 12px rgba(0,0,0,0.35); white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px;">
+                <span>📍</span>
+                <span style="overflow: hidden; text-overflow: ellipsis;">${place}</span>
+              </div>
+              <div style="width: 10px; height: 10px; border-radius: 9999px; background: #0284c7; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.4); margin-top: 2px;"></div>
+            </div>
+          `;
+
+          const inspectedIcon = L.divIcon({
+            className: 'kc-inspected-point-marker',
+            html: inspectedHtml,
+            iconSize: [170, 38],
+            iconAnchor: [85, 36]
+          });
+
+          const marker = L.marker([lat, lon], { icon: inspectedIcon, zIndexOffset: 950 }).addTo(mapInstanceRef.current);
+          inspectedMarkerRef.current = marker;
+
+          marker.bindPopup(`
+            <div style="font-family: system-ui, sans-serif; min-width: 210px; padding: 2px;">
+              <div style="font-weight: 800; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 5px; margin-bottom: 3px;">
+                <span style="font-size: 15px;">📍</span>
+                <span>${place}</span>
+              </div>
+              <div style="font-size: 11px; color: #475569; line-height: 1.35; margin-bottom: 6px;">
+                ${fullAddress}
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 5px; font-size: 10px; color: #64748b; font-family: monospace;">
+                <span>${lat.toFixed(4)}, ${lon.toFixed(4)}</span>
+                ${dist !== undefined ? `<span style="font-weight: 700; color: #0284c7;">${dist} km away</span>` : ''}
+              </div>
+              <div style="margin-top: 5px; padding: 3px 6px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; font-size: 9px; color: #065f46; font-weight: 600;">
+                ✓ Inspected place (your personal location pin remains unchanged)
+              </div>
+            </div>
+          `).openPopup();
+        }
       } catch {
-        setLocationLabel(`${lat.toFixed(4)}, ${lon.toFixed(4)} (Map Pin)`);
-        setLocStatus(`Pinned: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        setInspectedLocation({
+          lat,
+          lon,
+          name: `Point (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
+          address: `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`,
+          distanceKm: dist,
+          loading: false
+        });
+        setLocStatus(`Location: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
       }
-      setTimeout(() => setLocStatus(null), 4000);
+      setTimeout(() => setLocStatus(null), 5000);
     };
 
     map.on('click', onMapClick);
@@ -287,6 +370,10 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     return () => {
       clearTimeout(timer);
       map.off('click', onMapClick);
+      if (inspectedMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(inspectedMarkerRef.current);
+        inspectedMarkerRef.current = null;
+      }
       map.remove();
       mapInstanceRef.current = null;
       tileLayerRef.current = null;
@@ -361,6 +448,9 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       if (results.length === 0) {
         setLocError(`No locations found for "${searchQuery}". Please check spelling or enter postal code.`);
         setTimeout(() => setLocError(null), 5000);
+      } else {
+        // Automatically pin my location to the searched location and display the location name!
+        handleSelectSearchResult(results[0]);
       }
     } catch (err) {
       console.warn('Geocoding search failed:', err);
@@ -378,13 +468,15 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     setMyCoords([lat, lon]);
     const shortName =
       result.name ||
-      (result.display_name ? result.display_name.split(',').slice(0, 2).join(',') : '') ||
-      'Custom Pinned Location';
+      (result.display_name ? result.display_name.split(',')[0].trim() : '') ||
+      'Searched Location';
+    const fullAddress = result.display_name || shortName;
+
     setLocationLabel(shortName);
     setLocationSource('manual');
     setLocStatus(`Pinned to: ${shortName}`);
     setShowSearchResults(false);
-    setSearchQuery('');
+    setSearchQuery(shortName);
 
     localStorage.setItem('kc_user_pinned_coords', JSON.stringify({
       latitude: lat,
@@ -393,11 +485,11 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     }));
 
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([lat, lon], 14, { animate: true, duration: 0.8 });
+      mapInstanceRef.current.flyTo([lat, lon], 15, { animate: true, duration: 0.8 });
     }
 
     api.updateUserLocation(safeUser.id, lat, lon, shortName).catch(console.warn);
-    setTimeout(() => setLocStatus(null), 4000);
+    setTimeout(() => setLocStatus(null), 5000);
   };
 
   // Switch Tile Layer when tileStyle toggles
@@ -441,12 +533,16 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       const themeColor = isScrapper ? '#059669' : isRecycler ? '#1d4ed8' : '#6366f1';
       const roleTitle = isScrapper ? 'Scrapper Field Agent' : isRecycler ? 'Processing Plant' : 'Admin Hub';
 
+      const displayPinLabel = locationLabel
+        ? (locationLabel.length > 22 ? locationLabel.slice(0, 20) + '...' : locationLabel)
+        : 'YOU ARE HERE';
+
       const selfHtml = `
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-          <!-- Top floating badge -->
-          <div style="margin-bottom: 2px; background: #0f172a; color: #ffffff; padding: 2px 7px; border-radius: 9999px; font-size: 10px; font-weight: 800; border: 1.5px solid #ffffff; box-shadow: 0 4px 8px rgba(0,0,0,0.35); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+          <!-- Top floating badge showing location name -->
+          <div style="margin-bottom: 2px; background: #0f172a; color: #ffffff; padding: 2.5px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800; border: 1.5px solid #ffffff; box-shadow: 0 4px 8px rgba(0,0,0,0.35); white-space: nowrap; display: flex; align-items: center; gap: 4px;">
             <span style="display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: #22c55e;"></span>
-            <span>YOU ARE HERE</span>
+            <span>📍 ${displayPinLabel}</span>
           </div>
           <!-- Pulse rings -->
           <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
@@ -462,12 +558,27 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       const selfIcon = L.divIcon({
         className: 'kc-self-marker-v2',
         html: selfHtml,
-        iconSize: [110, 52],
-        iconAnchor: [55, 46]
+        iconSize: [140, 52],
+        iconAnchor: [70, 46]
       });
 
       const selfMarker = L.marker(myCoords, { icon: selfIcon, zIndexOffset: 1000 }).addTo(layerGroup);
       selfMarkerRef.current = selfMarker;
+
+      selfMarker.bindPopup(`
+        <div style="font-family: system-ui, sans-serif; min-width: 210px; padding: 2px;">
+          <div style="font-weight: 800; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 5px; margin-bottom: 3px;">
+            <span style="font-size: 15px;">📍</span>
+            <span>${locationLabel || safeUser.name}</span>
+          </div>
+          <div style="font-size: 11px; color: #475569; margin-bottom: 5px;">
+            ${safeUser.name} (${roleTitle})
+          </div>
+          <div style="font-size: 10px; font-family: monospace; color: #059669; font-weight: 700; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 3px 6px;">
+            ✓ Pinned at: ${myCoords[0].toFixed(4)}, ${myCoords[1].toFixed(4)}
+          </div>
+        </div>
+      `);
 
       selfMarker.on('click', () => {
         setSelectedNode({
@@ -475,7 +586,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
           data: {
             name: safeUser.name,
             role: safeUser.role,
-            location: safeUser.location,
+            location: locationLabel || safeUser.location,
             coords: myCoords
           }
         });
@@ -645,18 +756,31 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     setLocating(true);
     skipNextFitBoundsRef.current = true;
 
-    // Phase 1: Try real browser GPS
+    // Phase 1: Try real browser GPS (First High Accuracy, then Standard Accuracy fallback)
     let gpsAcquired = false;
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+      const getPos = (highAccuracy: boolean) =>
+        new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 10000,
-            enableHighAccuracy: true,
+            timeout: 5000,
+            enableHighAccuracy: highAccuracy,
             maximumAge: 30000
           });
         });
 
+      let pos: GeolocationPosition | null = null;
+      try {
+        pos = await getPos(true);
+      } catch {
+        // High accuracy timed out or unavailable on laptops without GPS chips; fallback immediately to WiFi/cell standard accuracy
+        try {
+          pos = await getPos(false);
+        } catch (gpsErr: any) {
+          console.warn('Browser GPS permission restricted/timed out, attempting IP Geolocation fallback:', gpsErr?.message);
+        }
+      }
+
+      if (pos) {
         const lat = Math.round(pos.coords.latitude * 10000) / 10000;
         const lon = Math.round(pos.coords.longitude * 10000) / 10000;
         const acc = Math.round(pos.coords.accuracy || 20);
@@ -689,8 +813,6 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
         }
 
         setTimeout(() => setLocStatus(null), 4000);
-      } catch (gpsErr: any) {
-        console.warn('Browser GPS permission restricted/timed out, attempting IP Geolocation fallback:', gpsErr.message);
       }
     }
 
@@ -828,15 +950,17 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
           </button>
 
           {/* Fit All Nodes */}
-          <button
-            type="button"
-            onClick={handleFitAll}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition-colors shadow-2xs cursor-pointer"
-            title="Zoom to fit all visible entities"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
-            <span className="hidden sm:inline">Fit All</span>
-          </button>
+          {!hideFitAll && (
+            <button
+              type="button"
+              onClick={handleFitAll}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition-colors shadow-2xs cursor-pointer"
+              title="Zoom to fit all visible entities"
+            >
+              <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+              <span className="hidden sm:inline">Fit All</span>
+            </button>
+          )}
 
           {/* Refresh Data */}
           <button
@@ -1034,6 +1158,45 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
             className="text-amber-700 font-bold hover:text-amber-950 text-xs cursor-pointer"
           >
             Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Clicked Location Inspector Banner */}
+      {inspectedLocation && (
+        <div className="px-3.5 py-2 bg-sky-50 border-b border-sky-200 text-slate-800 text-xs flex items-center justify-between gap-2.5 animate-in fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base shrink-0">📍</span>
+            <div className="min-w-0">
+              <div className="font-bold text-slate-900 truncate flex items-center gap-1.5">
+                <span>{inspectedLocation.name}</span>
+                {inspectedLocation.distanceKm !== undefined && (
+                  <span className="text-[10px] font-bold text-sky-800 bg-sky-100 border border-sky-200 px-1.5 py-0.2 rounded shrink-0">
+                    {inspectedLocation.distanceKm} km away
+                  </span>
+                )}
+                <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded hidden sm:inline shrink-0">
+                  (Your personal location pin is unchanged)
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 truncate font-mono">
+                {inspectedLocation.address}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setInspectedLocation(null);
+              if (inspectedMarkerRef.current && mapInstanceRef.current) {
+                mapInstanceRef.current.removeLayer(inspectedMarkerRef.current);
+                inspectedMarkerRef.current = null;
+              }
+            }}
+            className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded hover:bg-sky-100 transition-colors cursor-pointer shrink-0 text-xs"
+            title="Dismiss inspected location"
+          >
+            ✕
           </button>
         </div>
       )}

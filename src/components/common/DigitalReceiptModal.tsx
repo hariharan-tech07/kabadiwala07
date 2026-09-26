@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Transaction, VernacularLang } from '../../types';
-import { CheckCircle2, ShieldCheck, Printer, Download, X, QrCode, Building2, User, Scale } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Printer, Download, X, QrCode, Building2, User, Scale, FileText, FileCode, ChevronDown } from 'lucide-react';
+import { generateLotReceiptPdf } from '../../utils/pdfGenerator';
 
 interface DigitalReceiptModalProps {
   lot: Transaction | null;
@@ -23,6 +24,11 @@ const UI_TEXT: Record<VernacularLang, {
   settlementChannel: string;
   print: string;
   download: string;
+  formatTitle: string;
+  formatPdfDesc: string;
+  formatTxtDesc: string;
+  downloadPdfBtn: string;
+  downloadTxtBtn: string;
   close: string;
 }> = {
   en: {
@@ -39,7 +45,12 @@ const UI_TEXT: Record<VernacularLang, {
     totalPayout: 'Total Settlement Payout:',
     settlementChannel: 'Settlement Channel:',
     print: 'Print Gate Pass',
-    download: 'Download Receipt (.txt)',
+    download: 'Download Receipt',
+    formatTitle: 'Select Download Format (.PDF or .TXT):',
+    formatPdfDesc: 'Official CPCB PDF with barcode and certified breakdown',
+    formatTxtDesc: 'Plain text receipt voucher (.txt) for records/SMS',
+    downloadPdfBtn: 'Download .PDF',
+    downloadTxtBtn: 'Download .TXT',
     close: 'Close Voucher'
   },
   hi: {
@@ -57,6 +68,11 @@ const UI_TEXT: Record<VernacularLang, {
     settlementChannel: 'भुगतान माध्यम:',
     print: 'गेट पास प्रिंट करें',
     download: 'रसीद डाउनलोड करें',
+    formatTitle: 'डाउनलोड प्रारूप चुनें (.PDF या .TXT):',
+    formatPdfDesc: 'बारकोड और पूर्ण विवरण सहित आधिकारिक CPCB PDF',
+    formatTxtDesc: 'सरल टेक्स्ट पावती (.txt)',
+    downloadPdfBtn: '.PDF डाउनलोड करें',
+    downloadTxtBtn: '.TXT डाउनलोड करें',
     close: 'वाउचर बंद करें'
   },
   mr: {
@@ -74,6 +90,11 @@ const UI_TEXT: Record<VernacularLang, {
     settlementChannel: 'पैसे भरणा मार्ग:',
     print: 'गेटपास प्रिंट करा',
     download: 'पावती डाउनलोड करा',
+    formatTitle: 'डाउनलोड फॉरमॅट निवडा (.PDF किंवा .TXT):',
+    formatPdfDesc: 'बारकोड आणि अधिकृत तपशिलांसह CPCB PDF',
+    formatTxtDesc: 'साधा मजकूर पावती (.txt)',
+    downloadPdfBtn: '.PDF डाउनलोड करा',
+    downloadTxtBtn: '.TXT डाउनलोड करा',
     close: 'पावती बंद करा'
   },
   ta: {
@@ -90,7 +111,12 @@ const UI_TEXT: Record<VernacularLang, {
     totalPayout: 'மொத்த தீர்வுத் தொகை:',
     settlementChannel: 'பணம் செலுத்தும் முறை:',
     print: 'கேட் பாஸ் அச்சிடுக',
-    download: 'பதிவிறக்கு (.txt)',
+    download: 'ரசீது பதிவிறக்கு',
+    formatTitle: 'பதிவிறக்க வடிவத்தைத் தேர்வுசெய்க (.PDF அல்லது .TXT):',
+    formatPdfDesc: 'பார்கோடு மற்றும் அதிகாரப்பூர்வ விவரங்களுடன் CPCB PDF',
+    formatTxtDesc: 'எளிய உரை ரசீது (.txt)',
+    downloadPdfBtn: '.PDF பதிவிறக்கு',
+    downloadTxtBtn: '.TXT பதிவிறக்கு',
     close: 'மூடு'
   }
 };
@@ -99,9 +125,16 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({ lot, l
   if (!lot) return null;
 
   const ui = UI_TEXT[lang] || UI_TEXT.en;
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'txt'>('pdf');
+  const [showFormatPicker, setShowFormatPicker] = useState<boolean>(false);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = () => {
+    generateLotReceiptPdf(lot);
+    setShowFormatPicker(false);
   };
 
   const handleDownloadText = () => {
@@ -135,6 +168,7 @@ Compliance Standard: E-Waste Management Rules 2022
     a.download = `Receipt_${lot.lot_reference_id}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    setShowFormatPicker(false);
   };
 
   return (
@@ -278,31 +312,112 @@ Compliance Standard: E-Waste Management Rules 2022
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-end gap-2 pt-2 print:hidden shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full xs:w-auto px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer text-center"
-          >
-            {ui.close}
-          </button>
-          <button
-            type="button"
-            onClick={handleDownloadText}
-            className="w-full xs:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>{ui.download}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="w-full xs:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{ui.print}</span>
-          </button>
+        {/* Interactive Download Format Selection Panel */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 print:hidden shrink-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{ui.formatTitle}</span>
+            </span>
+            <span className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
+              Selected: <strong className="text-emerald-700 font-bold">.{downloadFormat.toUpperCase()}</strong>
+            </span>
+          </div>
+
+          {/* Segmented Format Choice Tabs */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <button
+              type="button"
+              id="select-format-pdf-btn"
+              onClick={() => setDownloadFormat('pdf')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-start gap-2 ${
+                downloadFormat === 'pdf'
+                  ? 'bg-emerald-50 border-emerald-500 shadow-xs ring-1 ring-emerald-500 text-emerald-950 font-bold'
+                  : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <FileText className={`w-4 h-4 mt-0.5 shrink-0 ${downloadFormat === 'pdf' ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className="min-w-0">
+                <div className="font-bold flex items-center gap-1">
+                  <span>PDF Document</span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded font-mono font-bold">.PDF</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-normal leading-tight mt-0.5 truncate">
+                  {ui.formatPdfDesc}
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              id="select-format-txt-btn"
+              onClick={() => setDownloadFormat('txt')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-start gap-2 ${
+                downloadFormat === 'txt'
+                  ? 'bg-emerald-50 border-emerald-500 shadow-xs ring-1 ring-emerald-500 text-emerald-950 font-bold'
+                  : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <FileCode className={`w-4 h-4 mt-0.5 shrink-0 ${downloadFormat === 'txt' ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <div className="min-w-0">
+                <div className="font-bold flex items-center gap-1">
+                  <span>Plain Text</span>
+                  <span className="text-[9px] bg-blue-100 text-blue-800 px-1 rounded font-mono font-bold">.TXT</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-normal leading-tight mt-0.5 truncate">
+                  {ui.formatTxtDesc}
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons with Format Option (.TXT or .PDF) */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-100 print:hidden shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Primary Download Button for Selected Format */}
+            <button
+              type="button"
+              id="download-receipt-main-btn"
+              onClick={downloadFormat === 'pdf' ? handleDownloadPdf : handleDownloadText}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              title={`Download official receipt in .${downloadFormat.toUpperCase()} format`}
+            >
+              {downloadFormat === 'pdf' ? <FileText className="w-4 h-4" /> : <FileCode className="w-4 h-4" />}
+              <span>{downloadFormat === 'pdf' ? ui.downloadPdfBtn : ui.downloadTxtBtn}</span>
+            </button>
+
+            {/* Quick 1-click alternative download */}
+            <button
+              type="button"
+              id={downloadFormat === 'pdf' ? 'download-receipt-txt-btn' : 'download-receipt-pdf-btn'}
+              onClick={downloadFormat === 'pdf' ? handleDownloadText : handleDownloadPdf}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-300 shadow-2xs transition-all cursor-pointer"
+              title={`Also download as ${downloadFormat === 'pdf' ? '.TXT' : '.PDF'}`}
+            >
+              <span>{downloadFormat === 'pdf' ? ui.downloadTxtBtn : ui.downloadPdfBtn}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              title="Print Gate Pass Voucher"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden xs:inline">{ui.print}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer text-center"
+            >
+              {ui.close}
+            </button>
+          </div>
         </div>
       </div>
     </div>

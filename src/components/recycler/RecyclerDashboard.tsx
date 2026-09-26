@@ -774,6 +774,7 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
                   currentUser={user}
                   mode="recycler_view"
                   height="360px"
+                  hideFitAll={true}
                   onOpenChat={onOpenChat}
                   onSelectLot={(lot) => {
                     const foundTx = transactions.find(t => t.id === lot.id);

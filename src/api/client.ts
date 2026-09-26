@@ -1,4 +1,4 @@
-import { User, Material, RecyclerFacility, Transaction, ChatMessage, AIPredictionResult, PriceHistory } from '../types';
+import { User, UserRole, Material, RecyclerFacility, Transaction, ChatMessage, AIPredictionResult, PriceHistory, CpcbEprCertificateExtraction, HouseholdPickupRequest } from '../types';
 
 const API_BASE = '';
 
@@ -886,10 +886,48 @@ export const api = {
         }
       }
     } catch (err) {
-      console.warn('Direct ipwho.is failed, trying server proxy:', err);
+      console.warn('Direct ipwho.is failed, trying client fallback:', err);
     }
 
-    // Attempt 2: Server-side IP lookup proxy
+    // Attempt 2: Direct client lookup from freeipapi.com (CORS enabled)
+    try {
+      const res = await fetch('https://freeipapi.com/api/json');
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          return {
+            latitude: data.latitude,
+            longitude: data.longitude,
+            city: data.cityName,
+            region: data.regionName,
+            country: data.countryName
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('freeipapi lookup failed:', err);
+    }
+
+    // Attempt 3: Direct client lookup from ipapi.co
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          return {
+            latitude: data.latitude,
+            longitude: data.longitude,
+            city: data.city,
+            region: data.region,
+            country: data.country_name
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('ipapi.co lookup failed, falling back to server proxy:', err);
+    }
+
+    // Attempt 4: Server-side IP lookup proxy
     try {
       const res = await fetch(`${API_BASE}/api/geo/ip-lookup`);
       if (res.ok) {
@@ -1141,6 +1179,75 @@ export const api = {
   async getCPCBComplianceReport(): Promise<any> {
     const res = await fetch(`${API_BASE}/api/reports/cpcb`);
     if (!res.ok) throw new Error('Failed to fetch CPCB report');
+    return await res.json();
+  },
+
+  // CPCB EPR Certificate Verification Assistant
+  async verifyCpcbCertificate(payload: { fileBase64?: string; mimeType?: string; fileName?: string }): Promise<CpcbEprCertificateExtraction> {
+    const res = await fetch(`${API_BASE}/api/recycler/verify-cpcb-certificate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Verification failed' }));
+      throw new Error(err.error || 'Failed to verify CPCB certificate');
+    }
+    return await res.json();
+  },
+
+  // User Role & Sales Frequency Update
+  async updateUserRole(userId: string, role: UserRole, sales_frequency?: 'regular' | 'periodical'): Promise<User> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, sales_frequency })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to update profile' }));
+      throw new Error(err.error || 'Profile update failed');
+    }
+    const data = await res.json();
+    localStorage.setItem('kc_session_user', JSON.stringify(data.user));
+    return data.user;
+  },
+
+  // Household Doorstep Pickups & Scrapper Connections
+  async getHouseholdPickups(params?: { household_id?: string; scrapper_id?: string }): Promise<HouseholdPickupRequest[]> {
+    const q = new URLSearchParams();
+    if (params?.household_id) q.set('household_id', params.household_id);
+    if (params?.scrapper_id) q.set('scrapper_id', params.scrapper_id);
+    const res = await fetch(`${API_BASE}/api/household/pickups?${q.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch household pickups');
+    return await res.json();
+  },
+
+  async createHouseholdPickup(pickup: Partial<HouseholdPickupRequest>): Promise<HouseholdPickupRequest> {
+    const res = await fetch(`${API_BASE}/api/household/pickups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pickup)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to create pickup request' }));
+      throw new Error(err.error || 'Pickup request creation failed');
+    }
+    return await res.json();
+  },
+
+  async updateHouseholdPickup(id: string, updates: Partial<HouseholdPickupRequest>): Promise<HouseholdPickupRequest> {
+    const res = await fetch(`${API_BASE}/api/household/pickups/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update pickup request');
+    return await res.json();
+  },
+
+  async getHouseholdScrappers(): Promise<Array<User & { rating?: number; vehicle?: string; pickups_completed?: number; operating_hours?: string; service_radius_km?: number }>> {
+    const res = await fetch(`${API_BASE}/api/household/scrappers`);
+    if (!res.ok) throw new Error('Failed to fetch nearby scrappers');
     return await res.json();
   }
 };

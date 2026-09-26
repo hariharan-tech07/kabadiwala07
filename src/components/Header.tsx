@@ -14,7 +14,7 @@ import {
   User as UserIcon, Building2, ShieldAlert, Compass, Bell,
   UserPlus, Scale, Sparkles, X,
   Headphones, Camera, MessageSquare, FileText, TrendingUp,
-  Sliders, Clock, Gavel, FileSpreadsheet, Users,
+  Sliders, Clock, Gavel, FileSpreadsheet, Users, IndianRupee,
   ChevronDown, Check, Layers, Database, Volume2, VolumeX, Menu, Smartphone
 } from 'lucide-react';
 import { PWAInstallButton } from './common/PWAInstallButton';
@@ -258,9 +258,77 @@ export const Header: React.FC<HeaderProps> = ({
         label: t.modAdmAudit?.title || 'Statutory Audit Trail',
         icon: Clock,
         badge: 'Audit',
-        subtitle: t.modAdmAudit?.desc || 'System logs & DDL schema'
+        subtitle: t.modAdmAudit?.desc || 'System logs & security records'
+      },
+      {
+        id: 'sql',
+        num: '7',
+        shortTitle: 'SQL Migration',
+        label: 'SQL Migration Engine (DDL)',
+        icon: Database,
+        badge: 'DDL',
+        subtitle: 'Production PostgreSQL & SQLite DDL scripts'
+      },
+      {
+        id: 'payments',
+        num: '8',
+        shortTitle: 'Payments & Audit',
+        label: 'Financial Auditing & Payout History',
+        icon: IndianRupee,
+        badge: 'Financials',
+        subtitle: 'Settlement reconciliation & UPI audits'
       }
     ];
+
+    if (user.role === 'household') {
+      return [
+        {
+          id: 'pickup',
+          num: '1',
+          shortTitle: 'Book Pickup',
+          label: 'Doorstep Scrap Pickups',
+          icon: Truck,
+          badge: 'Doorstep',
+          subtitle: 'Active & past household pickups'
+        },
+        {
+          id: 'scrappers',
+          num: '2',
+          shortTitle: 'Find Scrappers',
+          label: 'Nearby Verified Scrappers',
+          icon: Phone,
+          badge: 'Kabadiwalas',
+          subtitle: 'Direct call & chat with collectors'
+        },
+        {
+          id: 'calculator',
+          num: '3',
+          shortTitle: 'Rate Estimator',
+          label: 'Household Scrap Calculator',
+          icon: Scale,
+          badge: 'Fair Rates',
+          subtitle: 'Fair price estimator & rate card'
+        },
+        {
+          id: 'tracking',
+          num: '4',
+          shortTitle: 'Supply Chain',
+          label: 'Sold Scrap Tracking',
+          icon: Clock,
+          badge: 'Circular Flow',
+          subtitle: 'Track scrap sold by scrapper'
+        },
+        {
+          id: 'impact',
+          num: '5',
+          shortTitle: 'Green Impact',
+          label: 'Citizen Impact Certificate',
+          icon: Sparkles,
+          badge: 'Green Citizen',
+          subtitle: 'Landfill diversion & certificate'
+        }
+      ];
+    }
   };
 
   const navModules = getModules();
@@ -283,6 +351,13 @@ export const Header: React.FC<HeaderProps> = ({
           activeBg: 'bg-emerald-50 text-emerald-900 border-emerald-400 font-bold',
           pillBg: 'bg-emerald-600 text-white'
         };
+      case 'household':
+        return {
+          badge: 'bg-blue-100 text-blue-800 border-blue-300',
+          iconColor: 'text-blue-600',
+          activeBg: 'bg-blue-50 text-blue-900 border-blue-400 font-bold',
+          pillBg: 'bg-blue-600 text-white'
+        };
       case 'recycler':
         return {
           badge: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -296,6 +371,13 @@ export const Header: React.FC<HeaderProps> = ({
           iconColor: 'text-amber-600',
           activeBg: 'bg-amber-50 text-amber-900 border-amber-400 font-bold',
           pillBg: 'bg-amber-600 text-white'
+        };
+      default:
+        return {
+          badge: 'bg-slate-100 text-slate-800 border-slate-300',
+          iconColor: 'text-slate-600',
+          activeBg: 'bg-slate-50 text-slate-900 border-slate-400 font-bold',
+          pillBg: 'bg-slate-900 text-white'
         };
     }
   };

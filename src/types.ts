@@ -1,4 +1,4 @@
-export type UserRole = 'scrapper' | 'recycler' | 'admin';
+export type UserRole = 'scrapper' | 'recycler' | 'admin' | 'household';
 
 export interface User {
   id: string;
@@ -17,6 +17,37 @@ export interface User {
   suspension_reason?: string;
   created_at?: string;
   entity_name?: string;
+  sales_frequency?: 'regular' | 'periodical';
+}
+
+export type HouseholdMenuTab = 'pickup' | 'scrappers' | 'calculator' | 'tracking' | 'impact';
+
+export interface HouseholdPickupRequest {
+  id: string;
+  household_id: string;
+  household_name: string;
+  household_phone: string;
+  household_address: string;
+  household_gps?: { latitude: number; longitude: number };
+  scrapper_id?: string;
+  scrapper_name?: string;
+  scrapper_phone?: string;
+  category: string;
+  items_description: string;
+  estimated_weight_kg: number;
+  actual_weight_kg?: number;
+  offered_rate_per_kg?: number;
+  total_payout?: number;
+  pickup_date: string;
+  preferred_time_slot: string;
+  status: 'PENDING' | 'ACCEPTED' | 'IN_TRANSIT' | 'WEIGHED' | 'COMPLETED' | 'CANCELLED';
+  scrapper_resale_status?: 'COLLECTED_AT_DOORSTEP' | 'CONSOLIDATED_IN_YARD' | 'SOLD_TO_CIRCULAR_STREAM';
+  payment_mode?: 'UPI' | 'CASH' | 'IMPS';
+  payment_reference?: string;
+  image_url?: string;
+  notes?: string;
+  created_at: string;
+  completed_at?: string;
 }
 
 export interface Material {
@@ -307,3 +338,19 @@ export interface CPCBComplianceReport {
 }
 
 export type VernacularLang = 'en' | 'hi' | 'ta' | 'mr';
+
+export interface CpcbEprCertificateExtraction {
+  certificate_number: string | null;
+  issuing_division: string | null;
+  issue_date: string | null;
+  entity_name: string | null;
+  entity_address: string | null;
+  entity_category: 'Producer' | 'Recycler' | 'Refurbisher' | 'PWP' | 'Dismantler' | 'Other' | null;
+  waste_stream: 'E-Waste' | 'Plastic' | 'Battery' | 'Tyre' | 'Used Oil' | 'Other' | null;
+  validity_period_years: number | null;
+  authorized_signatory_name: string | null;
+  authorized_signatory_designation: string | null;
+  eee_or_item_codes: string[];
+  extraction_confidence: 'high' | 'medium' | 'low';
+  notes: string;
+}
