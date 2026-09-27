@@ -819,6 +819,54 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
 
 const INITIAL_CHATS: ChatMessage[] = [
   {
+    id: 'msg-hh-1',
+    sender_id: 'usr-household-1',
+    sender_name: 'Priya Sharma (Household)',
+    sender_role: 'household',
+    receiver_id: 'usr-scrapper-1',
+    message: 'Namaste Ramesh ji! I have around 15kg of mixed household e-scrap (old microwave, broken ceiling fan, tablet, copper wiring). Can you come for a doorstep pickup in Indiranagar today?',
+    timestamp: '2026-09-25T09:30:00Z',
+    metadata: {
+      type: 'pickup_inquiry',
+      data: { estimated_weight: 15, location: 'Indiranagar, Bengaluru' }
+    }
+  },
+  {
+    id: 'msg-hh-2',
+    sender_id: 'usr-scrapper-1',
+    sender_name: 'Ramesh Kumar',
+    sender_role: 'scrapper',
+    receiver_id: 'usr-household-1',
+    message: 'Namaste Priya ji! Yes, I am currently collecting in the Indiranagar zone with my electronic scale. Standard fair rates: ₹580/kg for copper cables, ₹48/kg for appliances and electronics. I can arrive around 11:30 AM.',
+    timestamp: '2026-09-25T09:35:00Z',
+    metadata: {
+      type: 'rate_offer',
+      data: { rate: 48, copperRate: 580, arrival_time: '11:30 AM' }
+    }
+  },
+  {
+    id: 'msg-hh-3',
+    sender_id: 'usr-household-1',
+    sender_name: 'Priya Sharma (Household)',
+    sender_role: 'household',
+    receiver_id: 'usr-scrapper-1',
+    message: 'Rates look great and compliant with CPCB guidelines. Address: Flat 402, Green Glen Layout, Indiranagar. Please provide digital UPI payment upon weighing.',
+    timestamp: '2026-09-25T09:40:00Z',
+    metadata: {
+      type: 'address_confirmed',
+      data: { address: 'Flat 402, Green Glen Layout, Indiranagar, Bengaluru', payment_mode: 'UPI' }
+    }
+  },
+  {
+    id: 'msg-hh-4',
+    sender_id: 'usr-scrapper-1',
+    sender_name: 'Ramesh Kumar',
+    sender_role: 'scrapper',
+    receiver_id: 'usr-household-1',
+    message: 'Confirmed! I will bring calibrated scale and process instant UPI payment with official green diversion certificate.',
+    timestamp: '2026-09-25T09:42:00Z'
+  },
+  {
     id: 'msg-1',
     lot_reference_id: '#LOT-2026-1044',
     sender_id: 'usr-scrapper-1',

@@ -20,7 +20,7 @@ export interface User {
   sales_frequency?: 'regular' | 'periodical';
 }
 
-export type HouseholdMenuTab = 'pickup' | 'scrappers' | 'calculator' | 'tracking' | 'impact';
+export type HouseholdMenuTab = 'pickup' | 'scrappers' | 'chat' | 'calculator' | 'tracking' | 'impact';
 
 export interface HouseholdPickupRequest {
   id: string;
@@ -200,7 +200,7 @@ export interface ChatMessage {
   message: string;
   timestamp: string;
   metadata?: {
-    type?: 'lot_ref' | 'rate_offer' | 'gps_coords' | 'pickup_time' | 'system_status';
+    type?: 'lot_ref' | 'rate_offer' | 'gps_coords' | 'pickup_time' | 'system_status' | 'pickup_inquiry' | 'address_confirmed';
     data?: any;
   };
 }

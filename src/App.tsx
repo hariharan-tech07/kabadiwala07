@@ -57,6 +57,7 @@ export default function App() {
   const [scrapperTab, setScrapperTab] = useState<ScrapperMenuTab>('safety');
   const [recyclerTab, setRecyclerTab] = useState<RecyclerMenuTab>('lots');
   const [adminTab, setAdminTab] = useState<AdminMenuTab>('transactions');
+  const [householdTab, setHouseholdTab] = useState<HouseholdMenuTab>('pickup');
 
   // Admin Master Dual-Control State (Admin can control scrapper and recycler)
   const [adminActiveMode, setAdminActiveMode] = useState<AdminActiveMode>('admin_oversight');
@@ -87,6 +88,8 @@ export default function App() {
 
   const activeTab = currentUser?.role === 'scrapper'
     ? scrapperTab
+    : currentUser?.role === 'household'
+    ? householdTab
     : currentUser?.role === 'recycler'
     ? recyclerTab
     : adminActiveMode === 'control_scrapper'
@@ -98,6 +101,8 @@ export default function App() {
   const handleSelectTab = (tabId: string) => {
     if (currentUser?.role === 'scrapper') {
       setScrapperTab(tabId as ScrapperMenuTab);
+    } else if (currentUser?.role === 'household') {
+      setHouseholdTab(tabId as HouseholdMenuTab);
     } else if (currentUser?.role === 'recycler') {
       setRecyclerTab(tabId as RecyclerMenuTab);
     } else if (currentUser?.role === 'admin') {
@@ -262,7 +267,17 @@ export default function App() {
               />
             )}
 
-        {currentUser.role === 'recycler' && (
+            {currentUser.role === 'household' && (
+              <HouseholdDashboard
+                user={currentUser}
+                lang={lang}
+                onOpenChat={handleOpenChat}
+                activeMenuTab={householdTab}
+                onSelectMenuTab={setHouseholdTab}
+              />
+            )}
+
+            {currentUser.role === 'recycler' && (
           <RecyclerDashboard
             user={currentUser}
             lang={lang}
@@ -346,6 +361,7 @@ export default function App() {
         lang={lang}
         onOpenChat={handleOpenChat}
         onSelectRecycler={(rec) => {
+          if (currentUser.role === 'household') return;
           setIsMapModalOpen(false);
           setChatTarget({
             id: rec.user_id,

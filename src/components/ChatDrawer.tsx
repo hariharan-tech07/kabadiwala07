@@ -240,6 +240,26 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
   const lotRefId = lot?.lot_reference_id;
 
+  const isHouseholdChat = currentUser.role === 'household' || targetUser.role === 'household';
+
+  const householdTemplates: string[] = [
+    'Hello! I have household electronic scrap (old appliances, phones, cables) ready for doorstep pickup.',
+    'Can you come today with a calibrated digital weighing scale?',
+    'What is your offered per-kg rate for mixed electronic and appliance scrap?',
+    'I have confirmed my doorstep address. Please let me know when you arrive.',
+    'Will you provide instant digital UPI or cash payment upon weighment?'
+  ];
+
+  const activeTemplates = isHouseholdChat ? householdTemplates : tChat.templates;
+
+  const dynamicChannelTitle = isHouseholdChat
+    ? (lang === 'hi' ? 'घरेलू नागरिक एवं कबाड़ीवाला चैट' : lang === 'mr' ? 'घरगुती नागरिक व कबाडीवाला थेट चर्चा' : lang === 'ta' ? 'குடியிருப்பு & கபாடிவாலா நேரடி அரட்டை' : 'Household Citizen ↔ Kabadiwala Direct Chat')
+    : tChat.channelTitle;
+
+  const dynamicChannelDesc = isHouseholdChat
+    ? (lang === 'hi' ? 'घर बैठे कबाड़ उठाने, भाव तय करने और समय तय करने हेतु सीधा संपर्क।' : lang === 'mr' ? 'घरपोच भंगार पिकअप, दर वाटाघाटी व थेट संवादासाठी सुरक्षित चॅनेल.' : lang === 'ta' ? 'வீட்டு வாசலில் கழிவு சேகரிக்க, விலை பேச மற்றும் நேரம் உறுதி செய்ய நேரடி தொடர்பு.' : 'Direct doorstep communication between Citizen and Verified Scrap Collector (Kabadiwala). Ask scrap rates, schedule doorstep pickup, and confirm payment.')
+    : tChat.channelDesc;
+
   // Sync with global audio feedback state
   useEffect(() => {
     return subscribeAudioFeedback((enabled) => setSoundActive(enabled));
@@ -285,9 +305,20 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
 
         setAllLots(txs);
 
-        // Filter contacts opposite to current user's role or all active members
+        // Filter contacts based on user role
         const filtered = users
-          .filter(u => u.id !== currentUser.id)
+          .filter(u => {
+            if (u.id === currentUser.id) return false;
+            if (currentUser.role === 'household') {
+              // Household only connects to scrappers
+              return u.role === 'scrapper';
+            }
+            if (currentUser.role === 'scrapper') {
+              // Scrapper connects to recyclers and households
+              return u.role === 'recycler' || u.role === 'household';
+            }
+            return true;
+          })
           .map(u => ({
             id: u.id,
             name: u.name,
@@ -344,13 +375,21 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   // Helper for quick testing of the audio feedback & live reply flow
   const handleSimulatePartnerMessage = async () => {
     try {
-      const sampleReplies = [
-        'Confirmed, certified weighment scale is active at our gate.',
-        'We can offer doorstep pickup in 45 minutes with verified electronic scales.',
-        'Please bring the lot manifest for instant EPR green token crediting.',
-        'Benchmark market rate accepted! Dispatched collection truck.',
-        'Lot weight verified on our platform. Preparing digital escrow payout.'
-      ];
+      const sampleReplies = isHouseholdChat
+        ? [
+            'Namaste! I am in your neighborhood and can arrive at your doorstep in 30 minutes with a calibrated digital scale.',
+            'Confirmed! I collect old home appliances, broken computers, wires, and scrap. Instant UPI payment on-site.',
+            'I have noted your doorstep address. Dispatched our electric collection cart.',
+            'Weighment verified. Thank you for responsibly giving your e-waste for circular recycling!',
+            'Fair CPCB rate locked. We are on our way to your location.'
+          ]
+        : [
+            'Confirmed, certified weighment scale is active at our gate.',
+            'We can offer doorstep pickup in 45 minutes with verified electronic scales.',
+            'Please bring the lot manifest for instant EPR green token crediting.',
+            'Benchmark market rate accepted! Dispatched collection truck.',
+            'Lot weight verified on our platform. Preparing digital escrow payout.'
+          ];
       const randomReply = sampleReplies[Math.floor(Math.random() * sampleReplies.length)];
 
       await api.sendChatMessage({

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { db } from './server/db';
 import { predictMaterialFromImage, verifyCpcbEprCertificate } from './server/aiService';
+import { HouseholdPickupRequest } from './src/types';
 
 dotenv.config();
 

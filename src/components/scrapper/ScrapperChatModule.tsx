@@ -3,7 +3,7 @@ import { User, ChatMessage, Transaction, RecyclerFacility, VernacularLang } from
 import { api } from '../../api/client';
 import {
   MessageSquare, Send, Paperclip, MapPin, DollarSign, Clock,
-  CheckCircle2, Building2, User as UserIcon, RefreshCw, Sparkles, Phone
+  CheckCircle2, Building2, User as UserIcon, RefreshCw, Sparkles, Phone, Home, Truck
 } from 'lucide-react';
 
 interface ScrapperChatModuleProps {
@@ -195,13 +195,39 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
 
   const attachedLot = initialLot || latestLot || (myLots.length > 0 ? myLots[0] : null);
 
+  // Channel Toggle: 'recyclers' (formal buyers) vs 'households' (doorstep pickup requests)
+  const [chatChannel, setChatChannel] = useState<'households' | 'recyclers'>('households');
+  const [activeHouseholdId, setActiveHouseholdId] = useState<string>('usr-household-1');
+  const [householdsList, setHouseholdsList] = useState<Array<{ id: string; name: string; location: string; phone: string; pendingItems?: string }>>([
+    {
+      id: 'usr-household-1',
+      name: 'Priya Sharma (Household)',
+      location: 'Flat 402, Green Glen Layout, Indiranagar, Bengaluru',
+      phone: '+91 98451 12345',
+      pendingItems: 'Old TV, microwave & mobile phones'
+    },
+    {
+      id: 'usr-household-2',
+      name: 'Amit Patel (Household)',
+      location: '12th Cross, Peenya 1st Stage, Bengaluru',
+      phone: '+91 98452 33445',
+      pendingItems: '2 Washing machine motors & computer cables'
+    }
+  ]);
+
   const [activeRecyclerId, setActiveRecyclerId] = useState<string>(
     initialTargetRecycler?.id || recyclers[0]?.id || 'rec-1'
   );
 
   useEffect(() => {
     if (initialTargetRecycler?.id) {
-      setActiveRecyclerId(initialTargetRecycler.id);
+      if (initialTargetRecycler.role === 'household') {
+        setChatChannel('households');
+        setActiveHouseholdId(initialTargetRecycler.id);
+      } else {
+        setChatChannel('recyclers');
+        setActiveRecyclerId(initialTargetRecycler.id);
+      }
     }
   }, [initialTargetRecycler?.id]);
 
@@ -249,6 +275,9 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
       service_radius_km: 30
     };
 
+  const activeHousehold = householdsList.find(h => h.id === activeHouseholdId) || householdsList[0];
+  const targetId = chatChannel === 'households' ? activeHousehold.id : activeRecycler.id;
+
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -274,7 +303,7 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
     try {
       const data = await api.getChats({
         user_id: safeUser.id,
-        other_user_id: activeRecycler.id
+        other_user_id: targetId
       });
       
       setMessages((prev) => {
@@ -305,7 +334,7 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
     fetchMessages();
     const interval = setInterval(fetchMessages, 2500);
     return () => clearInterval(interval);
-  }, [safeUser.id, activeRecycler.id]);
+  }, [safeUser.id, targetId]);
 
   useEffect(() => {
     if (isFirstLoadRef.current) {
@@ -321,7 +350,7 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
   useEffect(() => {
     isFirstLoadRef.current = true;
     setHasUnreadBelow(false);
-  }, [activeRecyclerId]);
+  }, [targetId]);
 
   const handleSendMessage = async (customText?: string, metadata?: any) => {
     const text = customText || inputText;
@@ -329,12 +358,14 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
 
     setLoading(true);
     try {
+      const receiverName = chatChannel === 'households' ? activeHousehold.name : activeRecycler.facility_name;
       const newMsg = await api.sendChatMessage({
-        lot_reference_id: attachedLot?.lot_reference_id,
+        lot_reference_id: chatChannel === 'recyclers' ? attachedLot?.lot_reference_id : undefined,
         sender_id: safeUser.id,
         sender_name: safeUser.name,
         sender_role: safeUser.role,
-        receiver_id: activeRecycler.id,
+        receiver_id: targetId,
+        receiver_name: receiverName,
         message: text.trim(),
         metadata
       });
@@ -421,44 +452,105 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
         </div>
       </div>
 
-      {/* Main Chat Console Grid: Left Recycler Directory (4 Cols); Right Chat Stream (8 Cols) */}
+      {/* Main Chat Console Grid: Left Recycler/Household Directory (4 Cols); Right Chat Stream (8 Cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-xs">
         
-        {/* Recycler Directory Sidebar */}
+        {/* Contact Directory Sidebar */}
         <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-slate-200 p-4 space-y-3 bg-slate-50">
+          {/* Channel Selector: Households vs Recyclers */}
+          <div className="grid grid-cols-2 p-1 bg-slate-200/80 rounded-xl text-xs font-bold gap-1">
+            <button
+              type="button"
+              onClick={() => setChatChannel('households')}
+              className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                chatChannel === 'households'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Households</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setChatChannel('recyclers')}
+              className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                chatChannel === 'recyclers'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Recyclers</span>
+            </button>
+          </div>
+
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              {tChat.authorizedPlants}
+              {chatChannel === 'households' ? 'Household Pickups' : tChat.authorizedPlants}
             </span>
             <span className="text-[11px] font-bold text-emerald-700">{tChat.online}</span>
           </div>
 
-          <div className="space-y-2">
-            {recyclers.map((rec) => (
-              <button
-                key={rec.id}
-                type="button"
-                onClick={() => setActiveRecyclerId(rec.id)}
-                className={`w-full text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
-                  activeRecyclerId === rec.id
-                    ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-400'
-                    : 'bg-white/60 border-slate-200 hover:bg-white text-slate-700'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900 leading-snug">
-                      {rec.facility_name}
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-0.5">{rec.address}</p>
+          <div className="space-y-2 max-h-[460px] overflow-y-auto pr-0.5">
+            {chatChannel === 'households' ? (
+              householdsList.map((hh) => {
+                const isSelected = activeHouseholdId === hh.id;
+                return (
+                  <button
+                    key={hh.id}
+                    type="button"
+                    onClick={() => setActiveHouseholdId(hh.id)}
+                    className={`w-full text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-400'
+                        : 'bg-white/60 border-slate-200 hover:bg-white text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 leading-snug">
+                          {hh.name}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{hh.location}</p>
+                      </div>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
+                    </div>
+                    {hh.pendingItems && (
+                      <div className="mt-2 text-[10px] bg-emerald-50 text-emerald-800 p-1.5 rounded-lg border border-emerald-200 font-semibold truncate">
+                        📦 {hh.pendingItems}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              recyclers.map((rec) => (
+                <button
+                  key={rec.id}
+                  type="button"
+                  onClick={() => setActiveRecyclerId(rec.id)}
+                  className={`w-full text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                    activeRecyclerId === rec.id
+                      ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-400'
+                      : 'bg-white/60 border-slate-200 hover:bg-white text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 leading-snug">
+                        {rec.facility_name}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">{rec.address}</p>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
                   </div>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
-                </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-500">
-                  {rec.cpcb_auth_number}
-                </div>
-              </button>
-            ))}
+                  <div className="mt-2 text-[11px] font-mono text-slate-500">
+                    {rec.cpcb_auth_number}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -468,23 +560,25 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
           <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                <Building2 className="w-5 h-5" />
+                {chatChannel === 'households' ? <Home className="w-5 h-5 text-emerald-600" /> : <Building2 className="w-5 h-5" />}
               </div>
               <div>
                 <h4 className="font-bold text-base text-slate-900">
-                  {activeRecycler.facility_name}
+                  {chatChannel === 'households' ? activeHousehold.name : activeRecycler.facility_name}
                 </h4>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="text-emerald-700 font-bold">{tChat.cpcbAuthorized}</span>
+                  <span className="text-emerald-700 font-bold">
+                    {chatChannel === 'households' ? 'Household Citizen • Doorstep Pickup' : tChat.cpcbAuthorized}
+                  </span>
                   <span>•</span>
-                  <span>{activeRecycler.contact_phone}</span>
+                  <span>{chatChannel === 'households' ? activeHousehold.phone : activeRecycler.contact_phone}</span>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
-              {attachedLot && (
+              {chatChannel === 'recyclers' && attachedLot && (
                 <button
                   type="button"
                   onClick={handleSendLotAttachment}
@@ -494,13 +588,24 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
                   {tChat.attachLot(attachedLot.lot_reference_id)}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setShowRateModal(!showRateModal)}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
-              >
-                {tChat.proposeRateBtn}
-              </button>
+              {chatChannel === 'recyclers' && (
+                <button
+                  type="button"
+                  onClick={() => setShowRateModal(!showRateModal)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  {tChat.proposeRateBtn}
+                </button>
+              )}
+              {chatChannel === 'households' && (
+                <a
+                  href={`tel:${activeHousehold.phone}`}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors flex items-center gap-1.5"
+                >
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Call Household</span>
+                </a>
+              )}
             </div>
           </div>
 
@@ -624,28 +729,58 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
           {/* Quick Action Footer Pills */}
           <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex items-center gap-2 overflow-x-auto text-xs">
             <span className="text-[11px] font-bold text-slate-500 shrink-0">{tChat.quickActions}</span>
-            <button
-              type="button"
-              onClick={handleSendGps}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
-            >
-              <MapPin className="w-3 h-3 text-emerald-600" />
-              <span>{tChat.shareMyGps}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendMessage(tChat.quickVehicleMsg)}
-              className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
-            >
-              {tChat.reqDoorstepVehicle}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendMessage(tChat.quickUpiMsg)}
-              className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
-            >
-              {tChat.askUpiPayout}
-            </button>
+            {chatChannel === 'households' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage('Namaste! I am nearby in your locality with an e-rickshaw and calibrated digital scale. Can I visit your doorstep now?')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  <Truck className="w-3 h-3 text-emerald-600" />
+                  <span>Arriving Soon</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage('I offer official CPCB guaranteed fair rates for all electronic scrap with instant UPI transfer.')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  <span>Fair Rates Guarantee</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage('Please share your flat number or landmark to reach your building gate quickly.')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  <MapPin className="w-3 h-3 text-blue-600" />
+                  <span>Ask Gate / Landmark</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleSendGps}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  <MapPin className="w-3 h-3 text-emerald-600" />
+                  <span>{tChat.shareMyGps}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage(tChat.quickVehicleMsg)}
+                  className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  {tChat.reqDoorstepVehicle}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage(tChat.quickUpiMsg)}
+                  className="px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold cursor-pointer shrink-0"
+                >
+                  {tChat.askUpiPayout}
+                </button>
+              </>
+            )}
           </div>
 
           {/* Chat Input Bar */}

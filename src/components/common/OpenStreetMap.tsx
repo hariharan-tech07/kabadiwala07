@@ -7,8 +7,16 @@ import {
   MapPin, Navigation, Compass, Layers, ShieldCheck, Phone,
   Package, ExternalLink, RefreshCw, AlertTriangle, ArrowRight,
   Maximize2, Crosshair, CheckCircle2, Globe, Building2, Bike,
-  Search, X, LocateFixed, MessageSquare
+  Search, X, LocateFixed, MessageSquare, Truck, RotateCcw
 } from 'lucide-react';
+
+// Configure default Leaflet icon paths so internal icons don't fail
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+});
 
 export interface GeoLotNode {
   id: string;
@@ -42,7 +50,7 @@ export interface GeoScrapperNode {
 
 interface OpenStreetMapProps {
   currentUser?: User;
-  mode?: 'scrapper_view' | 'recycler_view' | 'admin_view' | 'all';
+  mode?: 'scrapper_view' | 'recycler_view' | 'admin_view' | 'household_view' | 'all';
   height?: string;
   onSelectRecycler?: (facility: RecyclerFacility) => void;
   onSelectLot?: (lot: GeoLotNode) => void;
@@ -53,6 +61,11 @@ interface OpenStreetMapProps {
   userLocation?: { latitude: number; longitude: number; label?: string };
   facilities?: any[];
   hideFitAll?: boolean;
+}
+
+// Check if coordinates are within the territorial bounds of India
+export function isInsideIndia(lat: number, lon: number): boolean {
+  return lat >= 6.5 && lat <= 37.5 && lon >= 68.0 && lon <= 97.5;
 }
 
 // Calculate distance in km between two lat/lon points (Haversine formula)
@@ -190,10 +203,11 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
   const [locError, setLocError] = useState<string | null>(null);
 
   // Layer toggles
+  const isHousehold = safeUser.role === 'household' || mode === 'household_view';
   const isScrapperPortalOnly = mode === 'scrapper_view' || safeUser.role === 'scrapper';
-  const [showRecyclers, setShowRecyclers] = useState(true);
-  const [showScrappers, setShowScrappers] = useState(!isScrapperPortalOnly && (mode === 'admin_view' || mode === 'recycler_view' || mode === 'all'));
-  const [showLots, setShowLots] = useState(!isScrapperPortalOnly);
+  const [showRecyclers, setShowRecyclers] = useState(!isHousehold);
+  const [showScrappers, setShowScrappers] = useState(isHousehold || (!isScrapperPortalOnly && (mode === 'admin_view' || mode === 'recycler_view' || mode === 'all')));
+  const [showLots, setShowLots] = useState(!isScrapperPortalOnly && !isHousehold);
   const [showRadius, setShowRadius] = useState(true);
 
   // Map Tile Style: 'voyager' (clean, modern, high contrast) vs 'standard' (classic OSM)
@@ -228,8 +242,8 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Remove any previous leaflet instance id on container to prevent re-initialization error
     if ((mapContainerRef.current as any)._leaflet_id) {
+      (mapContainerRef.current as any)._leaflet_id = null;
       delete (mapContainerRef.current as any)._leaflet_id;
     }
 
@@ -245,28 +259,54 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     // Add zoom control at bottom-right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Initial tile layer: CartoDB Voyager for high contrast & clear readability
+    // Initial tile layer: CartoDB Voyager with fallback
     const tileUrl =
       tileStyle === 'voyager'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     const tile = L.tileLayer(tileUrl, {
       maxZoom: 19,
+      subdomains: ['a', 'b', 'c', 'd'],
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; CARTO'
-    }).addTo(map);
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+    });
 
+    // Auto-fallback if Carto tile fails to load: switch automatically to OpenStreetMap standard tiles
+    tile.on('tileerror', () => {
+      if (tileStyle === 'voyager' && mapInstanceRef.current && tileLayerRef.current) {
+        console.warn('Carto tile error detected, falling back gracefully to standard OSM tiles.');
+        try {
+          mapInstanceRef.current.removeLayer(tileLayerRef.current);
+          const fallbackTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c'],
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(mapInstanceRef.current);
+          tileLayerRef.current = fallbackTile;
+        } catch {}
+      }
+    });
+
+    tile.addTo(map);
     tileLayerRef.current = tile;
 
     const layerGroup = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
     layerGroupRef.current = layerGroup;
 
-    // Immediately trigger invalidateSize after mount to ensure tiles paint properly
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 150);
+    // Immediately and progressively trigger invalidateSize after mount to ensure tiles paint properly
+    const t1 = setTimeout(() => map.invalidateSize(), 50);
+    const t2 = setTimeout(() => map.invalidateSize(), 150);
+    const t3 = setTimeout(() => map.invalidateSize(), 350);
+    const t4 = setTimeout(() => map.invalidateSize(), 700);
+
+    const handleWindowResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
 
     // Interactive Map Inspector: Click anywhere to see the location name & address
     // Crucial: The user's own location is NOT moved or pinned to the clicked point!
@@ -368,13 +408,21 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     map.on('click', onMapClick);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      window.removeEventListener('resize', handleWindowResize);
       map.off('click', onMapClick);
       if (inspectedMarkerRef.current && mapInstanceRef.current) {
         mapInstanceRef.current.removeLayer(inspectedMarkerRef.current);
         inspectedMarkerRef.current = null;
       }
-      map.remove();
+      try {
+        map.remove();
+      } catch {
+        // safe ignore
+      }
       mapInstanceRef.current = null;
       tileLayerRef.current = null;
       layerGroupRef.current = null;
@@ -415,17 +463,19 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
 
         const ipData = await api.lookupIpLocation();
         if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
-          // If the detected location is different from 13.0315 (Bangalore default)
-          if (!safeUser.latitude || safeUser.latitude === 13.0315) {
-            setMyCoords([ipData.latitude, ipData.longitude]);
-            const place = [ipData.city, ipData.region, ipData.country].filter(Boolean).join(', ');
-            setLocationLabel(`${place || 'Local Area'} (Network IP)`);
-            setLocationSource('ip');
-            setLocStatus(`Auto-detected city: ${ipData.city || 'Network IP'}`);
-            if (mapInstanceRef.current) {
-              mapInstanceRef.current.flyTo([ipData.latitude, ipData.longitude], 12, { animate: true });
+          // Strictly verify the coordinates are in India before panning!
+          if (isInsideIndia(ipData.latitude, ipData.longitude)) {
+            if (!safeUser.latitude || safeUser.latitude === 13.0315) {
+              setMyCoords([ipData.latitude, ipData.longitude]);
+              const place = [ipData.city, ipData.region, ipData.country].filter(Boolean).join(', ');
+              setLocationLabel(`${place || 'Local Area'} (Network IP)`);
+              setLocationSource('ip');
+              setLocStatus(`Auto-detected city: ${ipData.city || 'Network IP'}`);
+              if (mapInstanceRef.current) {
+                mapInstanceRef.current.flyTo([ipData.latitude, ipData.longitude], 12, { animate: true });
+              }
+              setTimeout(() => setLocStatus(null), 4000);
             }
-            setTimeout(() => setLocStatus(null), 4000);
           }
         }
       } catch (err) {
@@ -503,15 +553,31 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
 
     const tileUrl =
       tileStyle === 'voyager'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     const newTile = L.tileLayer(tileUrl, {
       maxZoom: 19,
+      subdomains: ['a', 'b', 'c', 'd'],
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
-    }).addTo(map);
+    });
 
+    newTile.on('tileerror', () => {
+      if (tileStyle === 'voyager' && mapInstanceRef.current && tileLayerRef.current) {
+        try {
+          mapInstanceRef.current.removeLayer(tileLayerRef.current);
+          const fallbackTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c'],
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(mapInstanceRef.current);
+          tileLayerRef.current = fallbackTile;
+        } catch {}
+      }
+    });
+
+    newTile.addTo(map);
     tileLayerRef.current = newTile;
   }, [tileStyle]);
 
@@ -530,8 +596,8 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       const isScrapper = safeUser.role === 'scrapper';
       const isRecycler = safeUser.role === 'recycler';
 
-      const themeColor = isScrapper ? '#059669' : isRecycler ? '#1d4ed8' : '#6366f1';
-      const roleTitle = isScrapper ? 'Scrapper Field Agent' : isRecycler ? 'Processing Plant' : 'Admin Hub';
+      const themeColor = isScrapper ? '#059669' : isHousehold ? '#2563eb' : isRecycler ? '#1d4ed8' : '#6366f1';
+      const roleTitle = isScrapper ? 'Scrapper Field Agent' : isHousehold ? 'Household Residence' : isRecycler ? 'Processing Plant' : 'Admin Hub';
 
       const displayPinLabel = locationLabel
         ? (locationLabel.length > 22 ? locationLabel.slice(0, 20) + '...' : locationLabel)
@@ -594,7 +660,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     }
 
     // 2. Recycler Facilities (High-Visibility Royal Blue Badge + Service Radius)
-    if (showRecyclers) {
+    if (showRecyclers && !isHousehold) {
       geoData.recyclers.forEach((facility) => {
         const lat = facility.latitude;
         const lon = facility.longitude;
@@ -693,7 +759,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     }
 
     // 4. Traceable Scrap Lots (Vibrant Amber / Orange Badges)
-    if (showLots) {
+    if (showLots && !isHousehold) {
       geoData.lots.forEach((lot) => {
         const lat = lot.collection_gps.latitude;
         const lon = lot.collection_gps.longitude;
@@ -732,15 +798,19 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       });
     }
 
-    // Adjust map bounds ONLY on initial load or if not explicitly skipped
+    // Adjust map bounds on initial load once nodes are loaded
     if (skipNextFitBoundsRef.current) {
       // User just triggered "Locate Me" or jumped to a cluster; do not override zoom with fitBounds!
       skipNextFitBoundsRef.current = false;
-    } else if (!initialFitDoneRef.current && bounds.length > 1) {
+    } else if (!initialFitDoneRef.current && (geoData.scrappers.length > 0 || geoData.recyclers.length > 0 || geoData.lots.length > 0)) {
       try {
-        map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50], maxZoom: 14 });
+        if (bounds.length === 1) {
+          map.setView(bounds[0], 13);
+        } else if (bounds.length > 1) {
+          map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 14 });
+        }
         initialFitDoneRef.current = true;
-      } catch (err) {
+      } catch {
         // Safe fallback
       }
     }
@@ -748,8 +818,8 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
 
   // Multi-tier accurate "Locate Me":
   // Tier 1: True Browser Hardware GPS
-  // Tier 2: Automatic Network IP Geolocation fallback (Fast & accurate to user's real city)
-  // Tier 3: Friendly prompt to search city or click map (NEVER force Bangalore!)
+  // Tier 2: Automatic Network IP Geolocation fallback (Fast & accurate to user's real city in India)
+  // Tier 3: Friendly prompt to search city or click map
   const handleLocateMe = async () => {
     setLocError(null);
     setLocStatus('Requesting device GPS...');
@@ -822,10 +892,10 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
     }
 
     // Phase 2: Automatic Network IP Geolocation Fallback
-    setLocStatus('Browser GPS restricted in iframe; locating via Network IP...');
+    setLocStatus('Browser GPS restricted; locating via Network IP...');
     try {
       const ipData = await api.lookupIpLocation();
-      if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
+      if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number' && isInsideIndia(ipData.latitude, ipData.longitude)) {
         const lat = ipData.latitude;
         const lon = ipData.longitude;
         const place = [ipData.city, ipData.region, ipData.country].filter(Boolean).join(', ');
@@ -887,11 +957,13 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
 
     const bounds: L.LatLngExpression[] = [];
     if (myCoords) bounds.push(myCoords);
-    if (showRecyclers) geoData.recyclers.forEach((r) => bounds.push([r.latitude, r.longitude]));
+    if (showRecyclers && !isHousehold) geoData.recyclers.forEach((r) => bounds.push([r.latitude, r.longitude]));
     if (showScrappers) geoData.scrappers.forEach((s) => bounds.push([s.latitude, s.longitude]));
-    if (showLots) geoData.lots.forEach((l) => bounds.push([l.collection_gps.latitude, l.collection_gps.longitude]));
+    if (showLots && !isHousehold) geoData.lots.forEach((l) => bounds.push([l.collection_gps.latitude, l.collection_gps.longitude]));
 
-    if (bounds.length > 0) {
+    if (bounds.length === 1) {
+      map.setView(bounds[0], 13);
+    } else if (bounds.length > 1) {
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50], maxZoom: 14 });
     }
   };
@@ -962,6 +1034,26 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
             </button>
           )}
 
+          {/* Refresh Canvas / Invalidate Size */}
+          <button
+            type="button"
+            onClick={() => {
+              if (mapInstanceRef.current) {
+                mapInstanceRef.current.invalidateSize();
+                if (myCoords) {
+                  mapInstanceRef.current.panTo(myCoords);
+                }
+              }
+              setLocStatus('Map canvas refreshed');
+              setTimeout(() => setLocStatus(null), 3000);
+            }}
+            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition-colors shadow-2xs cursor-pointer"
+            title="Fix map display or recenter on your pin"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden sm:inline">Recenter</span>
+          </button>
+
           {/* Refresh Data */}
           <button
             type="button"
@@ -974,18 +1066,32 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
 
           {/* Layer Filter Buttons */}
           <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-300 shadow-2xs text-[11px]">
-            <button
-              type="button"
-              onClick={() => setShowRecyclers(!showRecyclers)}
-              className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
-                showRecyclers
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              🏭 Recyclers ({geoData.recyclers.length})
-            </button>
-            {!isScrapperPortalOnly && (
+            {!isHousehold && (
+              <button
+                type="button"
+                onClick={() => setShowRecyclers(!showRecyclers)}
+                className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
+                  showRecyclers
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🏭 Recyclers ({geoData.recyclers.length})
+              </button>
+            )}
+            {isHousehold ? (
+              <button
+                type="button"
+                onClick={() => setShowScrappers(!showScrappers)}
+                className={`px-2 py-1 rounded font-bold transition-all cursor-pointer ${
+                  showScrappers
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🚲 Neighborhood Scrappers ({geoData.scrappers.length})
+              </button>
+            ) : !isScrapperPortalOnly ? (
               <>
                 <button
                   type="button"
@@ -1010,7 +1116,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
                   📦 Lots ({geoData.lots.length})
                 </button>
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Style Toggle (Clean Voyager vs Classic OSM) */}
@@ -1311,7 +1417,7 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
                     📍 {selectedNode.distance} km from your live position
                   </div>
                 )}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
                   {onOpenChat && (
                     <button
                       type="button"
@@ -1326,6 +1432,25 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
                       <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Chat with Scrapper</span>
                     </button>
+                  )}
+                  {onSelectScrapper && isHousehold && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectScrapper(selectedNode.data)}
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      <Truck className="w-3.5 h-3.5" />
+                      <span>Book Pickup</span>
+                    </button>
+                  )}
+                  {selectedNode.data.phone && (
+                    <a
+                      href={`tel:${selectedNode.data.phone}`}
+                      className="p-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+                      title="Call scrapper directly"
+                    >
+                      <Phone className="w-4 h-4 text-emerald-600" />
+                    </a>
                   )}
                   <a
                     href={getOpenStreetMapDirectionsUrl(selectedNode.data.latitude, selectedNode.data.longitude)}
@@ -1412,18 +1537,22 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
       {/* High-Visibility Floating Legend & GIS Status Footer */}
       <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-700 gap-2">
         <div className="flex items-center flex-wrap gap-4">
-          <span className="flex items-center gap-1.5 font-bold text-slate-800">
-            <span className="w-3 h-3 rounded-full bg-blue-600 border border-white shadow-xs inline-block"></span>
-            <span>Authorized Recyclers ({geoData.recyclers.length})</span>
-          </span>
+          {!isHousehold && (
+            <span className="flex items-center gap-1.5 font-bold text-slate-800">
+              <span className="w-3 h-3 rounded-full bg-blue-600 border border-white shadow-xs inline-block"></span>
+              <span>Authorized Recyclers ({geoData.recyclers.length})</span>
+            </span>
+          )}
           <span className="flex items-center gap-1.5 font-bold text-slate-800">
             <span className="w-3 h-3 rounded-full bg-emerald-600 border border-white shadow-xs inline-block"></span>
-            <span>Scrap Collectors ({geoData.scrappers.length})</span>
+            <span>{isHousehold ? 'Neighborhood Scrappers' : 'Scrap Collectors'} ({geoData.scrappers.length})</span>
           </span>
-          <span className="flex items-center gap-1.5 font-bold text-slate-800">
-            <span className="w-3 h-3 rounded-full bg-amber-600 border border-white shadow-xs inline-block"></span>
-            <span>Active Scrap Lots ({geoData.lots.length})</span>
-          </span>
+          {!isHousehold && (
+            <span className="flex items-center gap-1.5 font-bold text-slate-800">
+              <span className="w-3 h-3 rounded-full bg-amber-600 border border-white shadow-xs inline-block"></span>
+              <span>Active Scrap Lots ({geoData.lots.length})</span>
+            </span>
+          )}
           <span className="flex items-center gap-1.5 font-bold text-indigo-700">
             <span className="w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs inline-block animate-ping"></span>
             <span>You Are Here</span>

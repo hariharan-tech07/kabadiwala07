@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { User, VernacularLang, HouseholdPickupRequest, HouseholdMenuTab } from '../../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, VernacularLang, HouseholdPickupRequest, HouseholdMenuTab, ChatMessage } from '../../types';
 import { api } from '../../api/client';
 import {
   Home, Truck, Phone, MessageSquare, Calendar, Clock, Scale,
   IndianRupee, ShieldCheck, CheckCircle2, MapPin, Sparkles, Plus,
   Download, FileText, AlertCircle, ArrowRight, Search, Filter,
   Check, ExternalLink, RefreshCw, X, ChevronRight, HelpCircle,
-  Award, Shield, FileCheck, Info
+  Award, Shield, FileCheck, Info, Send
 } from 'lucide-react';
 import { DigitalReceiptModal } from '../common/DigitalReceiptModal';
+import { OpenStreetMap } from '../common/OpenStreetMap';
 
 interface HouseholdDashboardProps {
   user: User;
@@ -25,6 +26,7 @@ const HOUSEHOLD_TEXTS = {
     requestPickupBtn: '+ Book Doorstep Scrap Pickup',
     activeTabPickup: 'Doorstep Pickups',
     activeTabScrappers: 'Nearby Scrappers (Kabadiwalas)',
+    activeTabChat: 'Chat with Scrapper',
     activeTabCalculator: 'Rate Calculator',
     activeTabTracking: 'Supply Chain Tracking',
     activeTabImpact: 'Green Citizen Impact',
@@ -51,6 +53,7 @@ const HOUSEHOLD_TEXTS = {
     requestPickupBtn: '+ डोरस्टेप स्क्रैप पिकअप बुक करें',
     activeTabPickup: 'डोरस्टेप पिकअप',
     activeTabScrappers: 'नजदीकी कबाड़ीवाले (स्क्रैपर)',
+    activeTabChat: 'कबाड़ीवाला चैट',
     activeTabCalculator: 'दर कैलकुलेटर',
     activeTabTracking: 'सप्लाई चेन ट्रैकिंग',
     activeTabImpact: 'पर्यावरण प्रभाव',
@@ -77,6 +80,7 @@ const HOUSEHOLD_TEXTS = {
     requestPickupBtn: '+ घरपोच स्क्रॅप पिकअप बुक करा',
     activeTabPickup: 'घरपोच पिकअप',
     activeTabScrappers: 'जवळचे कबाडीवाले',
+    activeTabChat: 'कबाडीवाला चॅट',
     activeTabCalculator: 'दर कॅल्क्युलेटर',
     activeTabTracking: 'सप्लाय चेन ट्रॅकिंग',
     activeTabImpact: 'पर्यावरणीय योगदान',
@@ -103,6 +107,7 @@ const HOUSEHOLD_TEXTS = {
     requestPickupBtn: '+ வீட்டிற்கே கழிவு சேகரிப்பு கோரிக்கை',
     activeTabPickup: 'வீட்டு வாசலில் சேகரிப்பு',
     activeTabScrappers: 'அருகிலுள்ள சேகரிப்பாளர்கள்',
+    activeTabChat: 'கபாடிவாலா அரட்டை',
     activeTabCalculator: 'விலை கணக்கீடு',
     activeTabTracking: 'விநியோக சங்கிலி கண்காணிப்பு',
     activeTabImpact: 'சுற்றுச்சூழல் தாக்கம்',
@@ -220,8 +225,16 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
   // Digital Receipt Modal
   const [receiptLot, setReceiptLot] = useState<any | null>(null);
 
-  // Scrapper Filter
+  // Scrapper Filter & View Mode
   const [scrapperSearch, setScrapperSearch] = useState('');
+  const [scrapperViewMode, setScrapperViewMode] = useState<'cards' | 'map'>('cards');
+
+  // Direct Scrapper Chat State for Tab 3
+  const [activeChatScrapperId, setActiveChatScrapperId] = useState<string>('usr-scrapper-1');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInputText, setChatInputText] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load Data
   const loadData = async () => {
@@ -243,6 +256,66 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
   useEffect(() => {
     loadData();
   }, [user.id]);
+
+  // Sync activeChatScrapperId when scrappers load
+  useEffect(() => {
+    if (scrappers.length > 0 && !scrappers.some(s => s.id === activeChatScrapperId)) {
+      setActiveChatScrapperId(scrappers[0].id);
+    }
+  }, [scrappers]);
+
+  // Fetch chat messages when activeChatScrapperId changes or tab is chat
+  const fetchHouseholdChats = async () => {
+    if (!activeChatScrapperId) return;
+    try {
+      const msgs = await api.getChats({
+        user_id: user.id,
+        other_user_id: activeChatScrapperId
+      });
+      setChatMessages(msgs);
+    } catch (err) {
+      console.warn('Failed to load household chats:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentTab === 'chat' || activeChatScrapperId) {
+      fetchHouseholdChats();
+      const interval = setInterval(fetchHouseholdChats, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [currentTab, activeChatScrapperId, user.id]);
+
+  useEffect(() => {
+    if (currentTab === 'chat') {
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, currentTab]);
+
+  const handleSendHouseholdMessage = async (textToSend?: string) => {
+    const text = textToSend || chatInputText;
+    if (!text.trim() || !activeChatScrapperId || chatSending) return;
+    setChatSending(true);
+    try {
+      const activeScrapper = scrappers.find(s => s.id === activeChatScrapperId);
+      const receiverName = activeScrapper?.name || 'Verified Kabadiwala';
+      await api.sendChatMessage({
+        sender_id: user.id,
+        sender_name: user.name,
+        sender_role: 'household',
+        receiver_id: activeChatScrapperId,
+        receiver_name: receiverName,
+        message: text.trim()
+      });
+      if (!textToSend) setChatInputText('');
+      fetchHouseholdChats();
+    } catch (err) {
+      console.warn('Failed to send chat message:', err);
+      showToast('Could not send message. Please retry.');
+    } finally {
+      setChatSending(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -390,6 +463,7 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
         {[
           { id: 'pickup', label: t.activeTabPickup, icon: Truck },
           { id: 'scrappers', label: t.activeTabScrappers, icon: Phone },
+          { id: 'chat', label: t.activeTabChat, icon: MessageSquare },
           { id: 'calculator', label: t.activeTabCalculator, icon: Scale },
           { id: 'tracking', label: t.activeTabTracking, icon: Clock },
           { id: 'impact', label: t.activeTabImpact, icon: Sparkles }
@@ -568,8 +642,8 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
                             created_at: p.created_at,
                             scrapper_name: p.scrapper_name || 'Ramesh Kumar',
                             scrapper_id: p.scrapper_id || 'usr-scrapper-1',
-                            recycler_name: 'Verified CPCB Circular Channel (via Scrapper)',
-                            recycler_id: 'rec-cpcb',
+                            recycler_name: 'Certified Circular Stream (Sold by Scrapper)',
+                            recycler_id: 'cpcb-circular-stream',
                             category: p.category,
                             actual_weight: p.actual_weight_kg || p.estimated_weight_kg,
                             estimated_weight: p.estimated_weight_kg,
@@ -609,21 +683,80 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
               </p>
             </div>
 
-            {/* Search Scrapper */}
-            <div className="relative max-w-xs w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={scrapperSearch}
-                onChange={(e) => setScrapperSearch(e.target.value)}
-                placeholder="Search scrapper by name or locality..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              />
+            {/* Controls: Search and View Mode Switcher */}
+            <div className="flex items-center gap-2 max-w-md w-full">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={scrapperSearch}
+                  onChange={(e) => setScrapperSearch(e.target.value)}
+                  placeholder="Search scrapper by name or locality..."
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setScrapperViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                    scrapperViewMode === 'cards'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScrapperViewMode('map')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    scrapperViewMode === 'map'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Map Radar</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Scrappers Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Conditional View: Live Map Radar vs Scrappers Grid */}
+          {scrapperViewMode === 'map' ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                    Neighborhood Kabadiwala Map Radar (Strictly Verified Scrappers Only)
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Zero Recycler Clutter
+                </span>
+              </div>
+              <OpenStreetMap
+                currentUser={user}
+                mode="all"
+                height="450px"
+                hideFitAll={true}
+                onOpenChat={onOpenChat}
+                onSelectScrapper={(scrapper) => {
+                  if (onOpenChat) {
+                    onOpenChat({
+                      id: scrapper.id,
+                      name: scrapper.name,
+                      role: 'scrapper',
+                      phone: scrapper.phone
+                    });
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredScrappers.map((scrapper) => (
               <div key={scrapper.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition-shadow space-y-4 flex flex-col justify-between">
                 <div className="space-y-3">
@@ -709,10 +842,265 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
               </div>
             ))}
           </div>
+        )}
+      </div>
+    )}
+
+      {/* TAB: DIRECT CHAT BETWEEN HOUSEHOLD AND NEIGHBORHOOD SCRAPPER */}
+      {currentTab === 'chat' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  Kabadiwala Negotiation Chat & Doorstep Coordination
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500">
+                Direct live conversation with certified neighborhood scrappers. Negotiate per-kg rates, request digital scale weighing, and confirm instant doorstep collection.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fetchHouseholdChats()}
+                className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Split Layout: Left Scrappers Roster, Right Live Messages */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Scrapper Directory List */}
+            <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-slate-200 p-4 bg-slate-50/70 space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Verified Scrappers ({scrappers.length})
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Online
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                {scrappers.map((scrapper) => {
+                  const isSelected = activeChatScrapperId === scrapper.id;
+                  return (
+                    <button
+                      key={scrapper.id}
+                      type="button"
+                      onClick={() => setActiveChatScrapperId(scrapper.id)}
+                      className={`w-full text-left p-3 rounded-2xl border-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-400'
+                          : 'bg-white/60 border-slate-200 hover:bg-white text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            {scrapper.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="font-bold text-xs text-slate-900 leading-tight">
+                                {scrapper.name}
+                              </h4>
+                              {scrapper.verified && (
+                                <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1 rounded">
+                                  ✓ KYC
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 truncate max-w-[170px] mt-0.5">
+                              {scrapper.location}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${isSelected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                        <span>{scrapper.vehicle || 'Electric Loader'}</span>
+                        <span className="font-semibold text-emerald-700">{scrapper.pickups_completed || 48}+ Pickups</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Chat Thread Console */}
+            <div className="lg:col-span-8 flex flex-col h-[520px] bg-white">
+              {/* Active Scrapper Header */}
+              {(() => {
+                const currentScrapper = scrappers.find(s => s.id === activeChatScrapperId) || scrappers[0];
+                return (
+                  <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                        {currentScrapper ? currentScrapper.name.slice(0, 2).toUpperCase() : 'SC'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-black text-sm text-slate-900 truncate">
+                            {currentScrapper ? currentScrapper.name : 'Ramesh Kumar (Kabadiwala)'}
+                          </h3>
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full border border-emerald-300">
+                            Aadhaar KYC
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {currentScrapper ? currentScrapper.location : 'Indiranagar & Peenya Zone'} • Calibrated Digital Scale Equipped
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {currentScrapper?.phone && (
+                        <a
+                          href={`tel:${currentScrapper.phone}`}
+                          className="py-1.5 px-3 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                          title="Call scrapper directly"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="hidden sm:inline">Call</span>
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedScrapperForBooking(currentScrapper);
+                          setIsBookingModalOpen(true);
+                        }}
+                        className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>Book Pickup</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Message Feed */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+                {chatMessages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <div className="max-w-md">
+                      <h4 className="font-bold text-sm text-slate-800">Start chat with your neighborhood Kabadiwala</h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Ask about per-kg scrap rates, check arrival times, or share your doorstep address to confirm a pickup.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center pt-2">
+                      {[
+                        'Namaste! I have old appliances ready for doorstep collection.',
+                        'What is your rate per kg for mixed electronics?',
+                        'Can you come today with a certified digital weighing scale?'
+                      ].map((preset, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => handleSendHouseholdMessage(preset)}
+                          className="text-[11px] font-semibold bg-white border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-slate-700 px-3 py-1.5 rounded-xl shadow-2xs transition-all text-left cursor-pointer"
+                        >
+                          "{preset}"
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => {
+                    const isSelf = msg.sender_id === user.id || msg.sender_role === 'household';
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-xs space-y-1 ${
+                            isSelf
+                              ? 'bg-slate-900 text-white rounded-br-xs'
+                              : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-4 text-[10px] opacity-75">
+                            <span className="font-bold">{isSelf ? 'You (Household)' : msg.sender_name || 'Kabadiwala'}</span>
+                            <span className="font-mono">
+                              {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                            </span>
+                          </div>
+                          <p className="leading-relaxed whitespace-pre-wrap font-medium">{msg.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatMessagesEndRef} />
+              </div>
+
+              {/* Quick Template Buttons */}
+              <div className="px-3.5 py-1.5 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+                <span className="text-slate-500 font-bold shrink-0 text-[10px] uppercase">Quick:</span>
+                <button
+                  type="button"
+                  onClick={() => handleSendHouseholdMessage(`[Doorstep Address] Please collect scrap from: ${user.location || 'Flat 402, Indiranagar, Bengaluru'}`)}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-700 font-semibold text-slate-700 whitespace-nowrap cursor-pointer shadow-2xs"
+                >
+                  📍 Share Address
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendHouseholdMessage('Please bring calibrated digital scale for accurate doorstep weighing.')}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-700 font-semibold text-slate-700 whitespace-nowrap cursor-pointer shadow-2xs"
+                >
+                  ⚖️ Digital Scale Request
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendHouseholdMessage('Will you provide instant UPI transfer upon weighment?')}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:text-emerald-700 font-semibold text-slate-700 whitespace-nowrap cursor-pointer shadow-2xs"
+                >
+                  💳 UPI Payout Confirmation
+                </button>
+              </div>
+
+              {/* Chat Input Bar */}
+              <div className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={chatInputText}
+                  onChange={(e) => setChatInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendHouseholdMessage();
+                    }
+                  }}
+                  placeholder="Type a message to scrapper (negotiate rates, confirm doorstep arrival)..."
+                  className="flex-1 text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSendHouseholdMessage()}
+                  disabled={chatSending || !chatInputText.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  {chatSending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">Send</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      {/* TAB 3: HOUSEHOLD SCRAP FAIR RATE ESTIMATOR & CALCULATOR */}
       {currentTab === 'calculator' && (
         <div className="space-y-6">
           <div>

@@ -6,7 +6,7 @@ import {
   Building2, ShieldAlert, KeyRound, RefreshCw, Check, Globe, MapPin,
   User as UserIcon, Phone, FileCheck, Eye, EyeOff, Truck, ArrowLeft,
   ChevronRight, UserCheck, LogIn, UserPlus, Zap, Download, Laptop, X,
-  Sparkles, UploadCloud, FileText, Code
+  Sparkles, UploadCloud, FileText, Code, Home, Scale
 } from 'lucide-react';
 import { AndroidAppModal } from './common/AndroidAppModal';
 
@@ -95,6 +95,19 @@ const AUTH_TEXTS: Record<VernacularLang, {
   adminPasswordLabel: string;
   adminSubmitBtn: string;
 
+  // Verification Question (Regular vs Periodical)
+  verifyFrequencyTitle: string;
+  verifyFrequencySubtitle: string;
+  verifyOtpVerifiedBadge: string;
+  regularOptionTitle: string;
+  regularOptionSubtitle: string;
+  regularOptionDesc: string;
+  regularOptionBtn: string;
+  periodicalOptionTitle: string;
+  periodicalOptionSubtitle: string;
+  periodicalOptionDesc: string;
+  periodicalOptionBtn: string;
+
   // Common
   loadingText: string;
   persistenceNotice: string;
@@ -172,6 +185,18 @@ const AUTH_TEXTS: Record<VernacularLang, {
     adminPasswordLabel: 'Authorized Admin Password',
     adminSubmitBtn: 'Authenticate Admin Session & Open Dashboard',
 
+    verifyFrequencyTitle: 'Verify Scrap Profile & Sales Frequency',
+    verifyFrequencySubtitle: 'Before proceeding to your dashboard, please specify whether you sell scrap regularly as a commercial collector or periodically as a household resident:',
+    verifyOtpVerifiedBadge: 'Mobile OTP Verified',
+    regularOptionTitle: 'Regular Scrap Sales',
+    regularOptionSubtitle: 'Scrap Collector (Kabadiwala) / Yard Aggregator',
+    regularOptionDesc: 'You operate a collection yard, mobile cart, or scrap business. You aggregate scrap daily and sell bulk lots into the circular economy stream.',
+    regularOptionBtn: 'I Sell Regular Scrap → Open Scrapper Dashboard',
+    periodicalOptionTitle: 'Periodical Scrap Sales',
+    periodicalOptionSubtitle: 'Household Citizen / Occasional Resident',
+    periodicalOptionDesc: 'You are a resident or family selling old electronics, appliances, and home scrap periodically. You can contact nearby scrappers for doorstep pickups, and that scrap is subsequently sold by the scrapper into circular recycling.',
+    periodicalOptionBtn: 'I Sell Periodical Scrap → Open Household Dashboard',
+
     loadingText: 'Authenticating...',
     persistenceNotice: 'Secure Session: Your authorized role dashboard remains authenticated across browser sessions.'
   },
@@ -247,6 +272,18 @@ const AUTH_TEXTS: Record<VernacularLang, {
     adminPhoneLabel: 'आधिकारिक मोबाइल नंबर',
     adminPasswordLabel: 'प्रशासक पासवर्ड',
     adminSubmitBtn: 'सत्र प्रमाणित करें व व्यवस्थापक डैशबोर्ड खोलें',
+
+    verifyFrequencyTitle: 'कबाड़ बिक्री की आवृत्ति सत्यापित करें',
+    verifyFrequencySubtitle: 'डैशबोर्ड में जाने से पहले कृपया चुनें कि आप कबाड़ नियमित रूप से संग्रहकर्ता के रूप में बेचते हैं या घरेलू नागरिक के रूप में कभी-कभार:',
+    verifyOtpVerifiedBadge: 'मोबाइल OTP सत्यापित',
+    regularOptionTitle: 'नियमित कबाड़ बिक्री (रेगुलर)',
+    regularOptionSubtitle: 'दैनिक कबाड़ीवाला / स्क्रैप यार्ड संग्रहकर्ता',
+    regularOptionDesc: 'आप एक संग्रह यार्ड या कबाड़ व्यवसाय संचालित करते हैं। आप रोजाना कबाड़ इकट्ठा कर रीसाइक्लिंग चेन में बल्क लॉट बेचते हैं।',
+    regularOptionBtn: 'नियमित कबाड़ बिक्री → स्क्रैपर डैशबोर्ड खोलें',
+    periodicalOptionTitle: 'आवधिक / कभी-कभार कबाड़ बिक्री (पीरियडिकल)',
+    periodicalOptionSubtitle: 'घरेलू नागरिक (हाउसहोल्ड सिटिजन)',
+    periodicalOptionDesc: 'आप घर का पुराना इलेक्ट्रॉनिक सामान, उपकरण, तार व कबाड़ कभी-कभार बेचते हैं। स्थानीय कबाड़ीवाले से घर बैठे संपर्क करें और कबाड़ीवाला इसे रीसाइक्लिंग चेन में बेचेगा।',
+    periodicalOptionBtn: 'आवधिक कबाड़ बिक्री → हाउसहोल्ड डैशबोर्ड खोलें',
 
     loadingText: 'सत्यापित हो रहा है...',
     persistenceNotice: 'सुरक्षित सत्र: आपका अधिकृत रोल डैशबोर्ड सुरक्षित रूप से सक्रिय रहेगा।'
@@ -324,6 +361,18 @@ const AUTH_TEXTS: Record<VernacularLang, {
     adminPasswordLabel: 'ॲडमिन पासवर्ड',
     adminSubmitBtn: 'ॲडमिन सत्र पडताळा व डॅशबोर्ड उघडा',
 
+    verifyFrequencyTitle: 'भंगार विक्रीची वारंवारता सत्यापित करा',
+    verifyFrequencySubtitle: 'डॅशबोर्डवर जाण्यापूर्वी कृपया निवडा: आपण व्यावसायिक कबाडीवाला म्हणून नियमित भंगार विकता की घरगुती नागरिक म्हणून अधूनमधून:',
+    verifyOtpVerifiedBadge: 'मोबाइल OTP सत्यापित',
+    regularOptionTitle: 'नियमित भंगार विक्री (रेग्युलर)',
+    regularOptionSubtitle: 'व्यावसायिक कबाडीवाला / स्क्रॅप संकलक',
+    regularOptionDesc: 'तुम्ही भंगार संकलन केंद्र चालवता. रोज भंगार गोळा करून पुनर्वापर साखळीत मोठे लॉट्स विकता.',
+    regularOptionBtn: 'नियमित विक्री → कबाडीवाला डॅशबोर्ड उघडा',
+    periodicalOptionTitle: 'नियतकालिक / अधूनमधून भंगार विक्री (पिरियॉडिकल)',
+    periodicalOptionSubtitle: 'घरगुती नागरिक (हाउसहोल्ड)',
+    periodicalOptionDesc: 'तुम्ही घरातील जुने इलेक्ट्रॉनिक सामान व भंगार अधूनमधून विकता. थेट स्थानिक कबाडीवाल्यांशी संपर्क करून घरपोच पिकअप मिळवा.',
+    periodicalOptionBtn: 'अधूनमधून विक्री → घरगुती डॅशबोर्ड उघडा',
+
     loadingText: 'पडताळणी सुरू आहे...',
     persistenceNotice: 'सुरक्षित सत्र: अधिकृत डॅशबोर्ड कार्यरत राहील.'
   },
@@ -400,6 +449,18 @@ const AUTH_TEXTS: Record<VernacularLang, {
     adminPasswordLabel: 'நிர்வாகி கடவுச்சொல்',
     adminSubmitBtn: 'அமர்வை சரிபார்த்து டாஷ்போர்டை திறக்கவும்',
 
+    verifyFrequencyTitle: 'கழிவு விற்பனை முறையை சரிபார்க்கவும்',
+    verifyFrequencySubtitle: 'டாஷ்போர்டிற்கு செல்வதற்கு முன், நீங்கள் வணிக ரீதியாக தொடர்ந்து கழிவு விற்பவரா அல்லது குடியிருப்பு பயன்பாட்டாளராக எப்போதாவது விற்பவரா என தேர்வு செய்யவும்:',
+    verifyOtpVerifiedBadge: 'மொபைல் OTP சரிபார்க்கப்பட்டது',
+    regularOptionTitle: 'வழக்கமான கழிவு விற்பனை (ரெகுலர்)',
+    regularOptionSubtitle: 'வணிக சேகரிப்பாளர் / கபாடிவாலா',
+    regularOptionDesc: 'நீங்கள் தினசரி கழிவுகளை சேகரித்து மொத்தமாக மறுசுழற்சி சங்கிலிக்கு விற்பனை செய்கிறீர்கள்.',
+    regularOptionBtn: 'வழக்கமான விற்பனை → ஸ்கிராப்பர் டாஷ்போர்டு திறக்க',
+    periodicalOptionTitle: 'காலமுறை / எப்போதாவது கழிவு விற்பனை (பீரியாடிகல்)',
+    periodicalOptionSubtitle: 'குடியிருப்பு பயனர் (ஹவுஸ்ஹோல்ட் சிட்டிசன்)',
+    periodicalOptionDesc: 'வீட்டு உபயோக மின்னணுக் கழிவுகளை எப்போதாவது வீட்டு வாசலில் கபாடிவாலாவிடம் கொடுத்து விற்கிறீர்கள். கபாடிவாலா இதனை முறைப்படி விற்பனை செய்வார்.',
+    periodicalOptionBtn: 'எப்போதாவது விற்பனை → குடியிருப்பு டாஷ்போர்டு திறக்க',
+
     loadingText: 'சரிபார்க்கிறது...',
     persistenceNotice: 'பாதுகாப்பான அமர்வு: உங்கள் அங்கீகரிக்கப்பட்ட டாஷ்போர்டு பாதுகாப்பாக இருக்கும்.'
   }
@@ -450,6 +511,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
+
+  // Post-OTP Scrap Frequency Verification State (Regular Scraps Sales vs Periodical Scraps Sales)
+  const [pendingOtpUser, setPendingOtpUser] = useState<User | null>(null);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   // 1. Scrapper Form State
   // Dual-portal toggle: 'login' (Sign In to existing collector account) | 'register' (Register new collection yard)
@@ -669,6 +734,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
     }
   };
 
+  // Handle verification question answer: Regular Scraps Sales vs Periodical Scraps Sales
+  const handleSelectSalesFrequency = async (frequency: 'regular' | 'periodical') => {
+    if (!pendingOtpUser) return;
+    setIsUpdatingRole(true);
+    setError(null);
+    try {
+      const targetRole: UserRole = frequency === 'regular' ? 'scrapper' : 'household';
+      const updatedUser = await api.updateUserRole(pendingOtpUser.id, targetRole, frequency);
+      localStorage.setItem('kc_session_user', JSON.stringify(updatedUser));
+      setPendingOtpUser(null);
+      onLoginSuccess(updatedUser);
+    } catch (err: any) {
+      // Fallback if offline
+      const updatedUser: User = {
+        ...pendingOtpUser,
+        role: frequency === 'regular' ? 'scrapper' : 'household',
+        sales_frequency: frequency
+      };
+      localStorage.setItem('kc_session_user', JSON.stringify(updatedUser));
+      setPendingOtpUser(null);
+      onLoginSuccess(updatedUser);
+    } finally {
+      setIsUpdatingRole(false);
+    }
+  };
+
   // Submit Scrapper Mobile + OTP Login
   const handleScrapperOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -691,7 +782,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
         phone: clean,
         otp: scrapperMobileOtp.trim()
       });
-      onLoginSuccess(res.user);
+      // After OTP: Prompt user to verify whether they sell scrap regularly or periodically
+      setPendingOtpUser(res.user);
     } catch (err: any) {
       setError(err.message || 'Invalid or expired OTP. Please verify and retry.');
     } finally {
@@ -768,7 +860,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
         password: effectivePassword,
         aadhaar_last4: effectiveAadhaar
       });
-      onLoginSuccess(res.user);
+      // After registration: Prompt user to verify scrap sales frequency (Regular vs Periodical)
+      setPendingOtpUser(res.user);
     } catch (err: any) {
       setError(err.message || 'Scrapper registration failed. Please verify information.');
     } finally {
@@ -2620,6 +2713,179 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
                 </form>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* POST-OTP PROFILE & SALES FREQUENCY VERIFICATION MODAL */}
+      {pendingOtpUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-5 sm:p-8 space-y-6 relative overflow-hidden my-auto max-h-[95vh] overflow-y-auto">
+            {/* Header Badge & Title */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{at.verifyOtpVerifiedBadge}: +91 {(pendingOtpUser.phone || '').replace(/\D/g, '').slice(-10) || '9845012345'}</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {at.verifyFrequencyTitle}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
+                {at.verifyFrequencySubtitle}
+              </p>
+            </div>
+
+            {/* Error banner if any */}
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Two Question Options: Regular Scraps Sales vs Periodical Scraps Sales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {/* Option 1: Regular Scrap Sales (Scrap Collector / Kabadiwala) */}
+              <div
+                id="select-regular-scraps-card"
+                onClick={() => !isUpdatingRole && handleSelectSalesFrequency('regular')}
+                className="group relative bg-white hover:bg-emerald-50/50 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 p-5 shadow-xs hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 flex items-center justify-center transition-colors shadow-xs">
+                      <Truck className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Scrapper App
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-950 flex items-center gap-1.5">
+                      <span>{at.regularOptionTitle}</span>
+                    </h3>
+                    <span className="text-xs font-semibold text-emerald-700 block mt-0.5">
+                      {at.regularOptionSubtitle}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {at.regularOptionDesc}
+                  </p>
+
+                  <div className="space-y-1.5 pt-1 text-[11px] text-slate-700">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Daily commercial collection & aggregation yard</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Hardware scale camera lock & fair MSP rates</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Sell bulk lots into circular recycling grid</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="confirm-regular-scrapper-btn"
+                  disabled={isUpdatingRole}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectSalesFrequency('regular');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isUpdatingRole ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>{at.regularOptionBtn}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Option 2: Periodical Scrap Sales (Household Resident) */}
+              <div
+                id="select-periodical-household-card"
+                onClick={() => !isUpdatingRole && handleSelectSalesFrequency('periodical')}
+                className="group relative bg-white hover:bg-blue-50/50 rounded-2xl border-2 border-slate-200 hover:border-blue-500 p-5 shadow-xs hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-100 group-hover:bg-blue-600 group-hover:text-white text-blue-800 flex items-center justify-center transition-colors shadow-xs">
+                      <Home className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                      Household Portal
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-950 flex items-center gap-1.5">
+                      <span>{at.periodicalOptionTitle}</span>
+                    </h3>
+                    <span className="text-xs font-semibold text-blue-700 block mt-0.5">
+                      {at.periodicalOptionSubtitle}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {at.periodicalOptionDesc}
+                  </p>
+
+                  <div className="space-y-1.5 pt-1 text-[11px] text-slate-700">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Book doorstep pickup with neighborhood scrapper</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Contact & chat with nearby verified Kabadiwalas</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Scrap is collected & sold by scrapper into circular stream</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Direct scrapper linkages • Zero recycler clutter</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="confirm-periodical-household-btn"
+                  disabled={isUpdatingRole}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectSalesFrequency('periodical');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 group-hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isUpdatingRole ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>{at.periodicalOptionBtn}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Persistence & Role Isolation Note */}
+            <p className="text-[11px] text-slate-500 text-center pt-2 border-t border-slate-100">
+              {at.persistenceNotice}
+            </p>
           </div>
         </div>
       )}

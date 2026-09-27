@@ -232,10 +232,14 @@ Compliance Standard: E-Waste Management Rules 2022
             </div>
             <div>
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
-                {ui.facility}
+                {lot.recycler_name?.includes('Scrapper') ? 'Circular Recycling Stream' : ui.facility}
               </span>
               <strong className="text-slate-900 font-semibold flex items-center gap-1 mt-0.5 truncate">
-                <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                {lot.recycler_name?.includes('Scrapper') ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                ) : (
+                  <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                )}
                 <span className="truncate">{lot.recycler_name}</span>
               </strong>
             </div>

@@ -12,7 +12,7 @@ import {
 import {
   ShieldCheck, MapPin, LogOut, Globe, CheckCircle2,
   User as UserIcon, Building2, ShieldAlert, Compass, Bell,
-  UserPlus, Scale, Sparkles, X,
+  UserPlus, Scale, Sparkles, X, Home, Truck, Phone,
   Headphones, Camera, MessageSquare, FileText, TrendingUp,
   Sliders, Clock, Gavel, FileSpreadsheet, Users, IndianRupee,
   ChevronDown, Check, Layers, Database, Volume2, VolumeX, Menu, Smartphone
@@ -80,67 +80,58 @@ export const Header: React.FC<HeaderProps> = ({
     if (user.role === 'scrapper') {
       return [
         {
-          id: 'safety',
-          num: '1',
-          shortTitle: t.modSafety?.label || 'Safety Voice',
-          label: t.modSafety?.title || 'Safety Guidance (Voice)',
-          icon: Headphones,
-          badge: lang === 'hi' ? 'ऑडियो' : lang === 'mr' ? 'ऑडिओ' : lang === 'ta' ? 'ஆடியோ' : 'Audio',
-          subtitle: t.modSafety?.desc || 'Vernacular narration'
-        },
-        {
           id: 'capture',
-          num: '2',
-          shortTitle: t.modCapture?.label || 'Capture & Scale',
-          label: t.modCapture?.title || 'Img Capture, Price & Scale Lock',
+          num: '1',
+          shortTitle: t.modCapture?.label || 'Camera & Scale',
+          label: t.modCapture?.title || 'Camera AI Scale & Weight',
           icon: Camera,
-          badge: lang === 'hi' ? 'लॉक' : lang === 'mr' ? 'लॉक' : lang === 'ta' ? 'பூட்டு' : 'Lock',
-          subtitle: t.modCapture?.desc || 'AI recognition & scale'
+          badge: 'AI Scale',
+          subtitle: t.modCapture?.desc || 'AI material recognition'
         },
         {
           id: 'map',
-          num: '3',
+          num: '2',
           shortTitle: t.modMap?.label || 'Map Radar',
-          label: t.modMap?.title || 'Map Radar & Recyclers',
+          label: t.modMap?.title || 'OpenStreetMap Collection Radar',
           icon: MapPin,
-          badge: lang === 'hi' ? 'सक्रिय' : lang === 'mr' ? 'थेट' : lang === 'ta' ? 'நேரலை' : 'Live',
-          subtitle: t.modMap?.desc || 'OpenStreetMap radar'
+          badge: 'Live',
+          subtitle: t.modMap?.desc || 'Geo collection map'
         },
         {
           id: 'chat',
-          num: '4',
-          shortTitle: t.modChat?.label || 'Recycler Chat',
-          label: t.modChat?.title || 'Recycler Chat Section',
+          num: '3',
+          shortTitle: 'Chat Desk',
+          label: 'Household & Recycler Chat Desk',
           icon: MessageSquare,
-          badge: lang === 'hi' ? 'सीधा' : lang === 'mr' ? 'थेट' : lang === 'ta' ? 'நேரடி' : 'Direct',
-          subtitle: t.modChat?.desc || 'Doorstep negotiations'
+          badge: 'Live Chat',
+          subtitle: 'Direct chat with households and recyclers'
         },
         {
           id: 'lots',
-          num: '5',
+          num: '4',
           shortTitle: t.modLots?.label || 'My Lots',
-          label: t.modLots?.title || 'My Broadcasted Lots & Traceability',
+          label: t.modLots?.title || 'My Lots & Handover Receipts',
           icon: FileText,
-          badge: lang === 'hi' ? 'लॉट्स' : lang === 'mr' ? 'लॉट्स' : lang === 'ta' ? 'லாட்கள்' : 'Lots',
-          subtitle: t.modLots?.desc || 'Gate Pass & tracking'
+          badge: 'Lots',
+          subtitle: t.modLots?.desc || 'Gate pass and receipts'
         },
         {
           id: 'rates',
-          num: '6',
-          shortTitle: t.modRates?.label || 'Benchmark Rates',
-          label: t.modRates?.title || 'Official CPCB Benchmark Rates',
+          num: '5',
+          shortTitle: t.modRates?.label || 'CPCB Rates',
+          label: t.modRates?.title || 'Statutory Fair Benchmark Rates',
           icon: TrendingUp,
-          badge: 'CPCB',
-          subtitle: t.modRates?.desc || 'Statutory fair prices'
+          badge: 'Rates',
+          subtitle: t.modRates?.desc || 'Official scrap prices'
         },
         {
-          id: 'complaints',
-          num: '7',
-          shortTitle: t.modScrapComplaints?.label || 'Grievance Desk',
-          label: t.modScrapComplaints?.title || 'Statutory Grievance & Dispute Redressal',
-          icon: ShieldAlert,
-          badge: lang === 'hi' ? 'दर्ज' : lang === 'mr' ? 'नोंदवले' : lang === 'ta' ? 'பதிவு' : 'Filed',
-          subtitle: t.modScrapComplaints?.desc || 'Ombudsman tribunal'
+          id: 'safety',
+          num: '6',
+          shortTitle: t.modSafety?.label || 'Safety Guide',
+          label: t.modSafety?.title || 'Hazardous Safety Guidance (Voice)',
+          icon: Headphones,
+          badge: 'Voice',
+          subtitle: t.modSafety?.desc || 'Vernacular audio guide'
         }
       ];
     }
@@ -204,12 +195,53 @@ export const Header: React.FC<HeaderProps> = ({
       ];
     }
 
+    if (user.role === 'household') {
+      return [
+        {
+          id: 'pickup',
+          num: '1',
+          shortTitle: 'Book Pickup',
+          label: 'Doorstep Scrap Pickups',
+          icon: Truck,
+          badge: 'Doorstep',
+          subtitle: 'Active & scheduled doorstep pickups'
+        },
+        {
+          id: 'scrappers',
+          num: '2',
+          shortTitle: 'Find Scrappers',
+          label: 'Nearby Verified Scrappers',
+          icon: Phone,
+          badge: 'Kabadiwalas',
+          subtitle: 'Direct connect with neighborhood collectors'
+        },
+        {
+          id: 'chat',
+          num: '3',
+          shortTitle: 'Scrapper Chat',
+          label: 'Kabadiwala Negotiation Chat',
+          icon: MessageSquare,
+          badge: 'Direct Chat',
+          subtitle: 'Live doorstep chat with neighborhood scrapper'
+        },
+        {
+          id: 'calculator',
+          num: '4',
+          shortTitle: 'Rate Estimator',
+          label: 'Household Scrap Rate Calculator',
+          icon: Scale,
+          badge: 'Fair Rates',
+          subtitle: 'Official CPCB benchmark rates'
+        }
+      ];
+    }
+
     // Admin
     return [
       {
         id: 'transactions',
         num: '1',
-        shortTitle: t.modAdmTx?.label || 'Tx Ledger',
+        shortTitle: t.modAdmTx?.label || 'Transactions',
         label: t.modAdmTx?.title || 'National Transaction Ledger',
         icon: FileSpreadsheet,
         badge: 'Ledger',
@@ -243,92 +275,15 @@ export const Header: React.FC<HeaderProps> = ({
         subtitle: t.modAdmComplaints?.desc || 'Dispute complaints'
       },
       {
-        id: 'legal',
-        num: '5',
-        shortTitle: t.modAdmLegal?.label || 'Enforcement',
-        label: t.modAdmLegal?.title || 'Legal Enforcement & Show-Cause',
-        icon: Gavel,
-        badge: 'Enforce',
-        subtitle: t.modAdmLegal?.desc || 'Regulatory cases'
-      },
-      {
         id: 'audit',
-        num: '6',
+        num: '5',
         shortTitle: t.modAdmAudit?.label || 'Audit Trail',
         label: t.modAdmAudit?.title || 'Statutory Audit Trail',
         icon: Clock,
         badge: 'Audit',
         subtitle: t.modAdmAudit?.desc || 'System logs & security records'
-      },
-      {
-        id: 'sql',
-        num: '7',
-        shortTitle: 'SQL Migration',
-        label: 'SQL Migration Engine (DDL)',
-        icon: Database,
-        badge: 'DDL',
-        subtitle: 'Production PostgreSQL & SQLite DDL scripts'
-      },
-      {
-        id: 'payments',
-        num: '8',
-        shortTitle: 'Payments & Audit',
-        label: 'Financial Auditing & Payout History',
-        icon: IndianRupee,
-        badge: 'Financials',
-        subtitle: 'Settlement reconciliation & UPI audits'
       }
     ];
-
-    if (user.role === 'household') {
-      return [
-        {
-          id: 'pickup',
-          num: '1',
-          shortTitle: 'Book Pickup',
-          label: 'Doorstep Scrap Pickups',
-          icon: Truck,
-          badge: 'Doorstep',
-          subtitle: 'Active & past household pickups'
-        },
-        {
-          id: 'scrappers',
-          num: '2',
-          shortTitle: 'Find Scrappers',
-          label: 'Nearby Verified Scrappers',
-          icon: Phone,
-          badge: 'Kabadiwalas',
-          subtitle: 'Direct call & chat with collectors'
-        },
-        {
-          id: 'calculator',
-          num: '3',
-          shortTitle: 'Rate Estimator',
-          label: 'Household Scrap Calculator',
-          icon: Scale,
-          badge: 'Fair Rates',
-          subtitle: 'Fair price estimator & rate card'
-        },
-        {
-          id: 'tracking',
-          num: '4',
-          shortTitle: 'Supply Chain',
-          label: 'Sold Scrap Tracking',
-          icon: Clock,
-          badge: 'Circular Flow',
-          subtitle: 'Track scrap sold by scrapper'
-        },
-        {
-          id: 'impact',
-          num: '5',
-          shortTitle: 'Green Impact',
-          label: 'Citizen Impact Certificate',
-          icon: Sparkles,
-          badge: 'Green Citizen',
-          subtitle: 'Landfill diversion & certificate'
-        }
-      ];
-    }
   };
 
   const navModules = getModules();
@@ -507,6 +462,13 @@ export const Header: React.FC<HeaderProps> = ({
             {t.roleScrapper}
           </span>
         );
+      case 'household':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <Home className="w-3.5 h-3.5" />
+            {lang === 'hi' ? 'घरेलू नागरिक' : lang === 'mr' ? 'घरगुती नागरिक' : lang === 'ta' ? 'குடியிருப்பு பயனர்' : 'Household Citizen'}
+          </span>
+        );
       case 'recycler':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -530,8 +492,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4 w-full min-w-0">
           {/* Logo & Brand */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink min-w-0">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-900 font-extrabold text-xs sm:text-sm shadow-xs shrink-0 ${
-              user.role === 'scrapper' ? 'bg-emerald-500' : user.role === 'recycler' ? 'bg-blue-500 text-white' : 'bg-amber-500'
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-extrabold text-xs sm:text-sm shadow-xs shrink-0 ${
+              user.role === 'scrapper' ? 'bg-emerald-500 text-slate-900' : user.role === 'household' ? 'bg-blue-600 text-white' : user.role === 'recycler' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-slate-900'
             }`}>
               KC
             </div>
@@ -544,6 +506,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase rounded-full border border-emerald-300">
                     <Smartphone className="w-2.5 h-2.5" />
                     <span>Android App</span>
+                  </span>
+                ) : user.role === 'household' ? (
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-full border border-blue-300">
+                    <Home className="w-2.5 h-2.5" />
+                    <span>Household Portal</span>
                   </span>
                 ) : user.role === 'recycler' ? (
                   <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-full border border-blue-300">
@@ -560,6 +527,8 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-xs text-slate-500 hidden xl:block">
                 {user.role === 'scrapper'
                   ? 'Kabadiwala Collector Android App • Camera AI Scale & Offline Sync'
+                  : user.role === 'household'
+                  ? 'Household Citizen Portal • Doorstep Scrap Pickup & Neighborhood Kabadiwala Connect'
                   : user.role === 'recycler'
                   ? 'Authorized Recycler Web Portal • Desktop Cloud Workspace'
                   : 'CPCB Central Regulatory Authority Web Portal • Statutory Directorate'}
@@ -567,127 +536,31 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* OPERATIONS WORKFLOW MENU IN NAV BAR — DESKTOP ONLY */}
+          {/* DIRECT NAVIGATION MENU BAR IN HEADER — DESKTOP */}
           {navModules.length > 0 && (
-            <div className="relative hidden md:flex items-center gap-1 shrink min-w-0" ref={modulesMenuRef}>
-              <button
-                type="button"
-                id="navbar-modules-dropdown-btn"
-                onClick={() => {
-                  setIsModulesMenuOpen(!isModulesMenuOpen);
-                  setIsLangMenuOpen(false);
-                  setIsNotifMenuOpen(false);
-                  setIsCornerMenuOpen(false);
-                }}
-                className={`flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px] ${
-                  isModulesMenuOpen
-                    ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-700'
-                    : 'bg-white hover:bg-slate-50 text-slate-800 shadow-2xs border border-slate-200'
-                }`}
-                aria-expanded={isModulesMenuOpen}
-                aria-haspopup="true"
-                title="View All Operations Modules"
-              >
-                {currentMod.icon ? (
-                  <currentMod.icon className={`w-4 h-4 shrink-0 ${isModulesMenuOpen ? 'text-emerald-400' : accent.iconColor}`} />
-                ) : (
-                  <Layers className={`w-4 h-4 shrink-0 ${isModulesMenuOpen ? 'text-emerald-400' : 'text-slate-600'}`} />
-                )}
-
-                <div className="flex flex-col text-left leading-none min-w-0">
-                  <span className="text-[9px] uppercase font-bold text-slate-400">
-                    {user.role.toUpperCase()} • {t.operationsMenuBar || 'Workflow'}
-                  </span>
-                  <span className="font-extrabold text-xs max-w-[100px] xs:max-w-[140px] sm:max-w-[200px] truncate text-slate-900 group-hover:text-black">
-                    {currentMod.shortTitle}
-                  </span>
-                </div>
-
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
-                    isModulesMenuOpen ? 'rotate-180 text-white' : ''
-                  }`}
-                />
-              </button>
-
-              {/* Modules Dropdown Menu Card */}
-              {isModulesMenuOpen && (
-                <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-auto sm:left-auto sm:right-0 sm:top-full mt-2 w-auto sm:w-96 max-h-[82vh] overflow-y-auto rounded-2xl bg-white border-2 border-slate-200 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between px-2.5 py-2 border-b border-slate-100 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-emerald-600" />
-                      <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                          {t.operationsMenuBar || 'Operations Workflow'}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 font-medium">
-                          {user.role.toUpperCase()} • {navModules.length} Modules Available
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 font-mono">
-                      {currentIndex + 1} of {navModules.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 max-h-[380px] overflow-y-auto pr-0.5">
-                    {navModules.map((mod) => {
-                      const isActive = currentTab === mod.id;
-                      const Icon = mod.icon;
-                      return (
-                        <button
-                          key={mod.id}
-                          type="button"
-                          id={`navbar-dropdown-opt-${mod.id}`}
-                          onClick={() => {
-                            handleTabClick(mod.id);
-                            setIsModulesMenuOpen(false);
-                          }}
-                          className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-all cursor-pointer border ${
-                            isActive
-                              ? accent.activeBg
-                              : 'bg-white hover:bg-slate-50 border-transparent text-slate-700 hover:text-slate-900'
-                          }`}
-                        >
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
-                              isActive
-                                ? accent.pillBg
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}
-                          >
-                            {mod.num}
-                          </span>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-1.5">
-                              <span className="text-xs font-extrabold flex items-center gap-1.5 truncate text-slate-900">
-                                <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? accent.iconColor : 'text-slate-400'}`} />
-                                <span className="truncate">{mod.label}</span>
-                              </span>
-                              {mod.badge && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                                  {mod.badge}
-                                </span>
-                              )}
-                            </div>
-                            {mod.subtitle && (
-                              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
-                                {mod.subtitle}
-                              </p>
-                            )}
-                          </div>
-
-                          {isActive && (
-                            <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-1" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200 shadow-2xs shrink min-w-0 overflow-x-auto">
+              {navModules.map((mod) => {
+                const isActive = currentTab === mod.id;
+                const Icon = mod.icon;
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    id={`navbar-tab-btn-${mod.id}`}
+                    onClick={() => handleTabClick(mod.id)}
+                    className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      isActive
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-white'
+                    }`}
+                    title={mod.label}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-500'}`} />
+                    <span className="truncate">{mod.shortTitle}</span>
+                  </button>
+                );
+              })}
+            </nav>
           )}
 
           {/* Right Section: Language Dropdown, Notifications, GPS, Profile & Logout */}
@@ -699,7 +572,6 @@ export const Header: React.FC<HeaderProps> = ({
                 id="header-lang-dropdown-btn"
                 onClick={() => {
                   setIsLangMenuOpen(!isLangMenuOpen);
-                  setIsModulesMenuOpen(false);
                   setIsNotifMenuOpen(false);
                   setIsCornerMenuOpen(false);
                 }}
@@ -767,7 +639,6 @@ export const Header: React.FC<HeaderProps> = ({
                 id="header-notification-bell-btn"
                 onClick={() => {
                   setIsNotifMenuOpen(!isNotifMenuOpen);
-                  setIsModulesMenuOpen(false);
                   setIsLangMenuOpen(false);
                   setIsCornerMenuOpen(false);
                 }}
@@ -784,22 +655,22 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-emerald-600" />
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                        {lang === 'hi' ? 'स्थानीय सूचना प्रणाली' : lang === 'mr' ? 'स्थानिक सूचना प्रणाली' : lang === 'ta' ? 'உள்ளூர் அறிவிப்பு மையம்' : 'Local Live Notifications'}
+                        {lang === 'hi' ? 'सूचना केंद्र' : lang === 'mr' ? 'सूचना केंद्र' : lang === 'ta' ? 'அறிவிப்பு மையம்' : 'Notification Center'}
                       </h4>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Active
+                      Live
                     </span>
                   </div>
 
                   <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                     {lang === 'hi'
-                      ? 'सक्रिय लेनदेन स्थिति परिवर्तन और नए कनेक्शन अनुरोधों पर शीर्ष पर अलर्ट संदेश दिखाई देंगे।'
+                      ? 'नए चैट संदेश, पिकअप अनुरोध और लेन-देन की स्थिति अपडेट यहां वास्तविक समय में दिखाई देंगे।'
                       : lang === 'mr'
-                      ? 'व्यवहारातील स्थिती बदल आणि नवीन जोडणी विनंत्या आल्यावर थेट वर सूचना दिसेल.'
+                      ? 'नवीन चॅट संदेश, पिकअप विनंत्या व व्यवहारातील अपडेट्स येथे दिसतील.'
                       : lang === 'ta'
-                      ? 'செயலில் உள்ள பரிவர்த்தனை மாற்றங்கள் மற்றும் புதிய இணைப்பு கோரிக்கைகளுக்கு மேல் பகுதியில் எச்சரிக்கை தோன்றும்.'
-                      : 'Alerts appear automatically at the top of the screen when transactions change status, new chats arrive, or lots are assigned.'}
+                      ? 'புதிய அரட்டை செய்திகள் மற்றும் பிக்கப் புதுப்பிப்புகள் இங்கு தோன்றும்.'
+                      : 'Live alerts appear automatically when new chats arrive, pickups are scheduled, or payments are processed.'}
                   </p>
 
                   {/* Audio Feedback System Controls */}
@@ -838,68 +709,6 @@ export const Header: React.FC<HeaderProps> = ({
                         {audioFeedbackOn ? 'Mute' : 'Enable'}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      {lang === 'hi' ? 'ऑडियो एवं लाइव अलर्ट परीक्षण' : lang === 'mr' ? 'ऑडिओ व थेट सूचना चाचणी' : lang === 'ta' ? 'ஒலி மற்றும் எச்சரிக்கை சோதனை' : 'Test Audio Feedback & Alerts'}
-                    </span>
-
-                    {/* Chat Audio Alert Test */}
-                    <button
-                      type="button"
-                      id="test-chat-audio-btn"
-                      onClick={triggerTestChatAudioAlert}
-                      className="w-full px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                      title="Plays the gentle sinusoidal chime for incoming chat messages"
-                    >
-                      <span className="flex items-center gap-2">
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{lang === 'hi' ? 'चैट संदेश ऑडियो टेस्ट' : lang === 'mr' ? 'चॅट संदेश ऑडिओ चाचणी' : lang === 'ta' ? 'அரட்டை செய்தி ஒலி' : 'Test Chat Message Sound'}</span>
-                      </span>
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                    </button>
-
-                    {/* Recycler Transaction Assigned Alert Test */}
-                    <button
-                      type="button"
-                      id="test-tx-assigned-audio-btn"
-                      onClick={triggerTestTransactionAssignedAlert}
-                      className="w-full px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                      title="Plays the distinctive ascending harmonic chime when a new transaction request is assigned to a recycler"
-                    >
-                      <span className="flex items-center gap-2">
-                        <UserPlus className="w-3.5 h-3.5 text-blue-600" />
-                        <span>{lang === 'hi' ? 'लॉट असाइन ऑडियो टेस्ट' : lang === 'mr' ? 'लॉट वाटप ऑडिओ चाचणी' : lang === 'ta' ? 'லாட் ஒதுக்கீடு ஒலி' : 'Test Transaction Assigned Sound'}</span>
-                      </span>
-                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                    </button>
-
-                    <button
-                      type="button"
-                      id="test-connection-notif-btn"
-                      onClick={triggerTestConnectionAlert}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <UserPlus className="w-3.5 h-3.5 text-slate-600" />
-                        <span>{lang === 'hi' ? 'कनेक्शन अनुरोध अलर्ट' : lang === 'mr' ? 'जोडणी विनंती सूचना' : lang === 'ta' ? 'இணைப்பு கோரிக்கை' : 'Connection Request Alert'}</span>
-                      </span>
-                      <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                    </button>
-
-                    <button
-                      type="button"
-                      id="test-status-notif-btn"
-                      onClick={triggerTestStatusAlert}
-                      className="w-full px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Scale className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{lang === 'hi' ? 'काटा वजन स्थिति अलर्ट' : lang === 'mr' ? 'काटा वजन स्थिती बदल' : lang === 'ta' ? 'எடை நிலை மாற்றம்' : 'Scale Status Change Alert'}</span>
-                      </span>
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    </button>
                   </div>
                 </div>
               )}
