@@ -15,7 +15,7 @@ import {
   UserPlus, Scale, Sparkles, X, Home, Truck, Phone,
   Headphones, Camera, MessageSquare, FileText, TrendingUp,
   Sliders, Clock, Gavel, FileSpreadsheet, Users, IndianRupee,
-  ChevronDown, Check, Layers, Database, Volume2, VolumeX, Menu, Smartphone
+  ChevronDown, ChevronLeft, ChevronRight, Check, Layers, Database, Volume2, VolumeX, Menu, Smartphone
 } from 'lucide-react';
 import { PWAInstallButton } from './common/PWAInstallButton';
 
@@ -39,6 +39,7 @@ interface HeaderProps {
   onNavigate?: (path: string) => void;
   activeTab?: string;
   onSelectTab?: (tabId: string) => void;
+  onSwitchApp?: (appRole: 'household' | 'scrapper' | 'recycler' | 'admin') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,7 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
   activePath = '/scrapper',
   onNavigate,
   activeTab,
-  onSelectTab
+  onSelectTab,
+  onSwitchApp
 }) => {
   const t = translations[lang] || translations.en;
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
@@ -80,8 +82,17 @@ export const Header: React.FC<HeaderProps> = ({
     if (user.role === 'scrapper') {
       return [
         {
-          id: 'capture',
+          id: 'safety',
           num: '1',
+          shortTitle: t.modSafety?.label || 'Safety Guide',
+          label: t.modSafety?.title || 'Hazardous Safety Guidance (Voice)',
+          icon: Headphones,
+          badge: 'Safety First',
+          subtitle: t.modSafety?.desc || 'Vernacular audio & hazard protocols'
+        },
+        {
+          id: 'capture',
+          num: '2',
           shortTitle: t.modCapture?.label || 'Camera & Scale',
           label: t.modCapture?.title || 'Camera AI Scale & Weight',
           icon: Camera,
@@ -90,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
         },
         {
           id: 'map',
-          num: '2',
+          num: '3',
           shortTitle: t.modMap?.label || 'Map Radar',
           label: t.modMap?.title || 'OpenStreetMap Collection Radar',
           icon: MapPin,
@@ -99,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
         },
         {
           id: 'chat',
-          num: '3',
+          num: '4',
           shortTitle: 'Chat Desk',
           label: 'Household & Recycler Chat Desk',
           icon: MessageSquare,
@@ -108,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
         },
         {
           id: 'lots',
-          num: '4',
+          num: '5',
           shortTitle: t.modLots?.label || 'My Lots',
           label: t.modLots?.title || 'My Lots & Handover Receipts',
           icon: FileText,
@@ -116,8 +127,17 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: t.modLots?.desc || 'Gate pass and receipts'
         },
         {
+          id: 'household_lots',
+          num: '6',
+          shortTitle: 'Household Lots',
+          label: 'Citizen Doorstep Scrap Lots & Pickups',
+          icon: Home,
+          badge: 'Households',
+          subtitle: 'Live scrap pickup requests from household citizens'
+        },
+        {
           id: 'rates',
-          num: '5',
+          num: '7',
           shortTitle: t.modRates?.label || 'CPCB Rates',
           label: t.modRates?.title || 'Statutory Fair Benchmark Rates',
           icon: TrendingUp,
@@ -125,13 +145,13 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: t.modRates?.desc || 'Official scrap prices'
         },
         {
-          id: 'safety',
-          num: '6',
-          shortTitle: t.modSafety?.label || 'Safety Guide',
-          label: t.modSafety?.title || 'Hazardous Safety Guidance (Voice)',
-          icon: Headphones,
-          badge: 'Voice',
-          subtitle: t.modSafety?.desc || 'Vernacular audio guide'
+          id: 'complaints',
+          num: '8',
+          shortTitle: t.modScrapComplaints?.label || 'Grievance Desk',
+          label: t.modScrapComplaints?.title || 'Statutory Grievance & Dispute Redressal Desk',
+          icon: ShieldAlert,
+          badge: 'Grievance',
+          subtitle: 'Dispute filing, underweighting claims & CPCB docket'
         }
       ];
     }
@@ -487,44 +507,44 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white text-slate-800 border-b border-slate-200 sticky top-0 z-40 shadow-xs w-full">
+    <header className="bg-[#0A101D]/95 text-slate-100 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md shadow-lg shadow-black/40 w-full">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4 w-full min-w-0">
           {/* Logo & Brand */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink min-w-0">
             <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-extrabold text-xs sm:text-sm shadow-xs shrink-0 ${
-              user.role === 'scrapper' ? 'bg-emerald-500 text-slate-900' : user.role === 'household' ? 'bg-blue-600 text-white' : user.role === 'recycler' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-slate-900'
+              user.role === 'scrapper' ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-950 font-black' : user.role === 'household' ? 'bg-blue-500 text-white' : user.role === 'recycler' ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-amber-500 text-slate-950 font-black'
             }`}>
               KC
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-bold text-xs sm:text-base md:text-lg text-slate-900 tracking-tight truncate max-w-[85px] xs:max-w-[120px] sm:max-w-none">
+                <span className="font-extrabold text-xs sm:text-base md:text-lg text-white tracking-tight truncate max-w-[85px] xs:max-w-[120px] sm:max-w-none">
                   {t.appName}
                 </span>
                 {user.role === 'scrapper' ? (
-                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase rounded-full border border-emerald-300">
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase rounded-full border border-emerald-500/40">
                     <Smartphone className="w-2.5 h-2.5" />
                     <span>Android App</span>
                   </span>
                 ) : user.role === 'household' ? (
-                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-full border border-blue-300">
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-black uppercase rounded-full border border-blue-500/40">
                     <Home className="w-2.5 h-2.5" />
                     <span>Household Portal</span>
                   </span>
                 ) : user.role === 'recycler' ? (
-                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-full border border-blue-300">
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-[10px] font-black uppercase rounded-full border border-cyan-500/40">
                     <Globe className="w-2.5 h-2.5" />
                     <span>Web Portal</span>
                   </span>
                 ) : (
-                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-black uppercase rounded-full border border-amber-300">
+                  <span className="hidden xs:inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase rounded-full border border-amber-500/40">
                     <Building2 className="w-2.5 h-2.5" />
                     <span>Web Desk</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 hidden xl:block">
+              <p className="text-xs text-slate-400 hidden xl:block">
                 {user.role === 'scrapper'
                   ? 'Kabadiwala Collector Android App • Camera AI Scale & Offline Sync'
                   : user.role === 'household'
@@ -536,31 +556,209 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* DIRECT NAVIGATION MENU BAR IN HEADER — DESKTOP */}
+          {/* 3-APP SEPARATE DASHBOARDS SWITCHER WITH SMOOTH LIVE CONNECTION */}
+          {onSwitchApp && (
+            <div className="hidden lg:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                type="button"
+                id="app-switch-household-btn"
+                onClick={() => onSwitchApp('household')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  user.role === 'household'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                }`}
+                title="Household Citizen App: Doorstep Pickups & Scrap Rates"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>Household App</span>
+              </button>
+
+              <button
+                type="button"
+                id="app-switch-scrapper-btn"
+                onClick={() => onSwitchApp('scrapper')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  user.role === 'scrapper'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                }`}
+                title="Kabadiwala Collector Android App: Camera AI Scale & Offline Sync"
+              >
+                <Truck className="w-3.5 h-3.5" />
+                <span>Scrapper App</span>
+              </button>
+
+              <button
+                type="button"
+                id="app-switch-recycler-btn"
+                onClick={() => onSwitchApp('recycler')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  user.role === 'recycler'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                }`}
+                title="Authorized Recycler Web Desk: B2B Procurement & CPCB Traceability"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Recycler Desk</span>
+              </button>
+
+              <button
+                type="button"
+                id="app-switch-admin-btn"
+                onClick={() => onSwitchApp('admin')}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  user.role === 'admin'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+                }`}
+                title="CPCB Central Regulatory Directorate"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>CPCB</span>
+              </button>
+            </div>
+          )}
+
+          {/* COMPACT OPERATIONS MENU BAR DROPDOWN IN HEADER — PREVENTS OVERFLOW */}
           {navModules.length > 0 && (
-            <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200 shadow-2xs shrink min-w-0 overflow-x-auto">
-              {navModules.map((mod) => {
-                const isActive = currentTab === mod.id;
-                const Icon = mod.icon;
-                return (
-                  <button
-                    key={mod.id}
-                    type="button"
-                    id={`navbar-tab-btn-${mod.id}`}
-                    onClick={() => handleTabClick(mod.id)}
-                    className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-white'
-                    }`}
-                    title={mod.label}
-                  >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-500'}`} />
-                    <span className="truncate">{mod.shortTitle}</span>
-                  </button>
-                );
-              })}
-            </nav>
+            <div className="relative hidden md:block" ref={modulesMenuRef}>
+              <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 shadow-lg">
+                {/* Prev Module Button */}
+                <button
+                  type="button"
+                  id="navbar-prev-module-btn"
+                  onClick={() => {
+                    const prevIndex = (currentIndex - 1 + navModules.length) % navModules.length;
+                    handleTabClick(navModules[prevIndex].id);
+                  }}
+                  disabled={navModules.length <= 1}
+                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
+                  title="Previous Module"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Dropdown Toggle Button */}
+                <button
+                  type="button"
+                  id="header-modules-dropdown-btn"
+                  onClick={() => {
+                    setIsModulesMenuOpen(!isModulesMenuOpen);
+                    setIsLangMenuOpen(false);
+                    setIsNotifMenuOpen(false);
+                    setIsCornerMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isModulesMenuOpen
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-slate-800/90 hover:bg-slate-800 text-slate-200 border border-slate-700'
+                  }`}
+                  aria-expanded={isModulesMenuOpen}
+                  aria-haspopup="true"
+                  title="Click to select operational module"
+                >
+                  {currentMod && (
+                    <currentMod.icon className={`w-3.5 h-3.5 shrink-0 ${isModulesMenuOpen ? 'text-emerald-300' : 'text-emerald-400'}`} />
+                  )}
+                  <span className="truncate max-w-[130px] lg:max-w-[170px]">
+                    {currentMod?.shortTitle || 'Menu'}
+                  </span>
+                  <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                    isModulesMenuOpen ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                  }`}>
+                    {currentIndex + 1}/{navModules.length}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
+                    isModulesMenuOpen ? 'rotate-180 text-white' : 'text-slate-400'
+                  }`} />
+                </button>
+
+                {/* Next Module Button */}
+                <button
+                  type="button"
+                  id="navbar-next-module-btn"
+                  onClick={() => {
+                    const nextIndex = (currentIndex + 1) % navModules.length;
+                    handleTabClick(navModules[nextIndex].id);
+                  }}
+                  disabled={navModules.length <= 1}
+                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
+                  title="Next Module"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Module Dropdown Popover */}
+              {isModulesMenuOpen && (
+                <div className="absolute top-full left-0 mt-2 z-50 w-72 sm:w-80 bg-[#0E1626] rounded-2xl shadow-2xl border border-slate-800 p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-md">
+                  <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Operations & Workflows</span>
+                      <p className="text-xs font-bold text-white">
+                        {user.role === 'scrapper'
+                          ? 'Kabadiwala Collector App'
+                          : user.role === 'household'
+                          ? 'Household Citizen App'
+                          : user.role === 'recycler'
+                          ? 'Authorized Recycler Web Desk'
+                          : 'Central Authority Directorate'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">
+                      {navModules.length} Modules
+                    </span>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto space-y-1 py-1">
+                    {navModules.map((mod, idx) => {
+                      const isActive = currentTab === mod.id;
+                      const ModIcon = mod.icon;
+                      return (
+                        <button
+                          key={mod.id}
+                          type="button"
+                          id={`dropdown-module-${mod.id}`}
+                          onClick={() => {
+                            handleTabClick(mod.id);
+                            setIsModulesMenuOpen(false);
+                          }}
+                          className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 transition-colors cursor-pointer ${
+                            isActive
+                              ? 'bg-emerald-500/20 border border-emerald-500/40 text-white font-bold'
+                              : 'hover:bg-slate-800/60 text-slate-300'
+                          }`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            isActive ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            <ModIcon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-bold truncate">{mod.label}</span>
+                              {mod.badge && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-emerald-400 shrink-0 border border-slate-700">
+                                  {mod.badge}
+                                </span>
+                              )}
+                            </div>
+                            {mod.subtitle && (
+                              <p className="text-[11px] text-slate-500 truncate">{mod.subtitle}</p>
+                            )}
+                          </div>
+                          {isActive && (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-1" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Right Section: Language Dropdown, Notifications, GPS, Profile & Logout */}

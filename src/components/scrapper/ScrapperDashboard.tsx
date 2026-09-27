@@ -11,15 +11,17 @@ import { SafetyGuidanceModal } from '../common/SafetyGuidanceModal';
 import { notifyUser } from '../common/NotificationToast';
 import { generateScrapperMonthlyStatement } from '../../utils/pdfGenerator';
 import { offlineQueue, QueuedLot } from '../../utils/offlineQueue';
+import { offlinePhotoDb, OfflinePhotoRecord } from '../../utils/offlinePhotoDb';
 import {
   Camera, Upload, Sparkles, Scale, IndianRupee, MapPin, CheckCircle2,
   Phone, MessageSquare, Volume2, VolumeX, ShieldAlert, ArrowRight,
   TrendingUp, RefreshCw, AlertTriangle, FileCheck, Compass, Map,
   Loader2, Headphones, Radio, Search, FileText, QrCode, ExternalLink,
   ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ArrowUpRight, WifiOff, Download, ShieldCheck, Split,
-  Check, X, Smartphone
+  Check, X, Smartphone, Database, Wifi, Home, Truck
 } from 'lucide-react';
 import { AndroidAppModal } from '../common/AndroidAppModal';
+import { OfflinePhotoVaultModal } from './OfflinePhotoVaultModal';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { vernacularAudio } from '../../utils/audioPlayer';
 import { SafetyGuidanceModule } from './SafetyGuidanceModule';
@@ -29,6 +31,8 @@ import { ScrapperChatModule } from './ScrapperChatModule';
 import { BroadcastedLotsModule } from './BroadcastedLotsModule';
 import { BenchmarkRatesModule } from './BenchmarkRatesModule';
 import { ScrapperComplaintsModule } from './ScrapperComplaintsModule';
+import { HouseholdPickupsModule } from './HouseholdPickupsModule';
+import { HouseholdPickupRequest } from '../../types';
 import pcbImg from '../../assets/images/pcb_scrap_batch_1789436553690.jpg';
 
 export type ScrapperMenuTab = 
@@ -37,6 +41,7 @@ export type ScrapperMenuTab =
   | 'map'
   | 'chat'
   | 'lots'
+  | 'household_lots'
   | 'rates'
   | 'complaints';
 
@@ -70,6 +75,7 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
   // Materials & Base Rates
   const [materials, setMaterials] = useState<Material[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [householdPickups, setHouseholdPickups] = useState<HouseholdPickupRequest[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('PCB (Printed Circuit Boards)');
   const [weightKg, setWeightKg] = useState<string>('25');
 
@@ -130,13 +136,58 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
   const [queuedLots, setQueuedLots] = useState<QueuedLot[]>([]);
   const [isSyncingQueue, setIsSyncingQueue] = useState(false);
 
+  // Offline Photo Database & No-Network Handling state
+  const [offlinePhotos, setOfflinePhotos] = useState<OfflinePhotoRecord[]>([]);
+  const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
+  const [isOfflineVaultModalOpen, setIsOfflineVaultModalOpen] = useState(false);
+  const [simulateNoNetwork, setSimulateNoNetwork] = useState(false);
+
+  // CRITICAL REQUIREMENT: Recycler pickup trucks dispatch to the Main Hub of the scrapper, NOT their live roving GPS!
+  const scrapperMainHub = {
+    latitude: user.latitude || 13.0315,
+    longitude: user.longitude || 77.5210,
+    address: user.location?.includes('Hub') || user.location?.includes('Yard')
+      ? user.location
+      : `${user.location} — Peenya Aggregation Yard (Main Licensed Hub)`,
+    hub_name: `${user.name.split('(')[0].trim()}'s Registered Main Hub`,
+    is_main_hub: true
+  };
+
   useEffect(() => {
     loadData();
     refreshLocation();
     setQueuedLots(offlineQueue.getQueue());
 
-    // Offline queue event listener
+    // Load offline photos from separate database
+    offlinePhotoDb.getAllPhotos().then(setOfflinePhotos).catch(console.warn);
+
+    // Auto-predict offline photos & sync lots as soon as network is restored
     const handleOnline = async () => {
+      // 1. Process pending offline photos: Run Gemini AI prediction & convert to lots
+      try {
+        const pendingPhotos = await offlinePhotoDb.getPendingPhotos();
+        if (pendingPhotos.length > 0) {
+          setIsSyncingPhotos(true);
+          const res = await offlinePhotoDb.syncAndPredictPending();
+          setIsSyncingPhotos(false);
+          const updatedPhotos = await offlinePhotoDb.getAllPhotos();
+          setOfflinePhotos(updatedPhotos);
+
+          if (res.predicted > 0) {
+            setSuccessToast(`🌐 Network Available: Predicted ${res.predicted} offline photo(s) via Gemini AI & converted into verified lots!`);
+            await loadData();
+            notifyUser({
+              title: lang === 'hi' ? 'ऑफ़लाइन फोटो एआई द्वारा प्रेडिक्ट हुए' : 'Offline Photos AI-Predicted & Synced',
+              message: `${res.predicted} photo(s) taken in offline yard were analyzed by Gemini AI and converted into official lots targeting your Main Hub.`,
+              type: 'status'
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync offline photos on reconnect:', err);
+      }
+
+      // 2. Sync queued lots
       if (offlineQueue.getQueue().length > 0) {
         setIsSyncingQueue(true);
         const res = await offlineQueue.syncAll();
@@ -165,16 +216,18 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
 
   const loadData = async () => {
     try {
-      const [mats, recs, txs, cmps] = await Promise.all([
+      const [mats, recs, txs, cmps, pickups] = await Promise.all([
         api.getMaterials(),
         api.getRecyclers(),
         api.getTransactions({ scrapper_id: user.id }),
-        api.getComplaints()
+        api.getComplaints(),
+        api.getHouseholdPickups({ scrapper_id: user.id })
       ]);
       setMaterials(mats);
       setRecyclers(recs);
       setMyLots(txs);
       setComplaints(cmps || []);
+      setHouseholdPickups(pickups || []);
     } catch (err) {
       console.error('Error loading scrapper dashboard data:', err);
     }
@@ -224,6 +277,33 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
     setSuccessToast(null);
 
     const weightVal = parseFloat(weightKg) || 10;
+    const isOffline = !navigator.onLine || simulateNoNetwork;
+
+    // IF AT NO NETWORK AREA: store photos in separate offline database!
+    if (isOffline) {
+      try {
+        const saved = await offlinePhotoDb.savePhoto({
+          scrapper_id: user.id,
+          scrapper_name: user.name,
+          photo_data_url: imageBase64,
+          file_name: fileName || `offline_capture_${Date.now()}.jpg`,
+          mime_type: mimeType || 'image/jpeg',
+          estimated_weight_kg: weightVal,
+          category_hint: categoryHint || selectedCategory,
+          notes: 'Captured in offline area. Stored in separate offline database.',
+          main_hub_address: scrapperMainHub.address,
+          main_hub_coords: { latitude: scrapperMainHub.latitude, longitude: scrapperMainHub.longitude }
+        });
+        const currentList = await offlinePhotoDb.getAllPhotos();
+        setOfflinePhotos(currentList);
+        setSuccessToast(`📵 Remote Yard (No Network): Photo stored in Separate Offline Photo Database (#${saved.id.slice(-6)}). As soon as network is available, it will be automatically analyzed by Gemini AI and converted into an official lot!`);
+      } catch (e) {
+        console.error('Failed to store offline photo:', e);
+      }
+      setIsAnalyzing(false);
+      return;
+    }
+
     try {
       const result = await api.predictMaterial({
         imageBase64,
@@ -242,7 +322,28 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
       setSafetyCategory(predictedCategory);
       setIsSafetyModalOpen(true);
     } catch (err) {
-      console.warn('AI pipeline error, calculating via local base rates:', err);
+      console.warn('AI pipeline error or offline area, preserving photo in offline database:', err);
+      // Fallback: save to separate offline database so it's not lost
+      try {
+        await offlinePhotoDb.savePhoto({
+          scrapper_id: user.id,
+          scrapper_name: user.name,
+          photo_data_url: imageBase64,
+          file_name: fileName,
+          mime_type: mimeType,
+          estimated_weight_kg: weightVal,
+          category_hint: categoryHint || selectedCategory,
+          notes: 'Network interrupted during analysis. Stored in separate offline database.',
+          main_hub_address: scrapperMainHub.address,
+          main_hub_coords: { latitude: scrapperMainHub.latitude, longitude: scrapperMainHub.longitude }
+        });
+        const currentList = await offlinePhotoDb.getAllPhotos();
+        setOfflinePhotos(currentList);
+        setSuccessToast(`📵 Connection Interrupted: Photo safely saved to Offline Photo Database. Will auto-predict once network returns.`);
+      } catch (saveErr) {
+        console.error('Failed to store offline photo:', saveErr);
+      }
+
       // Heuristic fallback
       const matched = materials.find(m => m.category === selectedCategory) || materials[0];
       const rate = matched?.base_rate_per_kg || 300;
@@ -292,7 +393,7 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
     const baseRate = currentMat?.base_rate_per_kg || 320;
 
     // Check if offline - store in local offline queue
-    if (!navigator.onLine) {
+    if (!navigator.onLine || simulateNoNetwork) {
       const queued = offlineQueue.enqueueLot({
         scrapper_id: user.id,
         scrapper_name: user.name,
@@ -302,14 +403,17 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
         estimated_weight: weightVal,
         declared_weight: weightVal,
         offered_rate_per_kg: baseRate,
+        // CRITICAL REQUIREMENT: Recycler pickup trucks dispatch to the Main Hub of the scrapper, NOT their roving live location!
         collection_gps: {
-          latitude: currentCoords.latitude,
-          longitude: currentCoords.longitude,
-          address: `${user.location} (${currentCoords.label})`
+          latitude: scrapperMainHub.latitude,
+          longitude: scrapperMainHub.longitude,
+          address: scrapperMainHub.address,
+          hub_name: scrapperMainHub.hub_name,
+          is_main_hub: true
         },
         payment_mode: 'UPI_DIGITAL',
         image_url: imagePreview,
-        notes: `Offline Created: Fair estimate ₹${aiResult?.total_min_price} - ₹${aiResult?.total_max_price}`
+        notes: `Offline Created: Fair estimate ₹${aiResult?.total_min_price} - ₹${aiResult?.total_max_price}. Pickup Location: Scrapper Main Hub.`
       });
       setQueuedLots(offlineQueue.getQueue());
       setSuccessToast(`Stored offline (${queued.client_reference_id}). Will auto-sync when network returns!`);
@@ -328,14 +432,17 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
         declared_weight: weightVal,
         weight_confirmed_by_scrapper: true,
         offered_rate_per_kg: baseRate,
+        // CRITICAL REQUIREMENT: Recycler pickup trucks dispatch to the Main Hub of the scrapper, NOT their roving live location!
         collection_gps: {
-          latitude: currentCoords.latitude,
-          longitude: currentCoords.longitude,
-          address: `${user.location} (${currentCoords.label})`
+          latitude: scrapperMainHub.latitude,
+          longitude: scrapperMainHub.longitude,
+          address: scrapperMainHub.address,
+          hub_name: scrapperMainHub.hub_name,
+          is_main_hub: true
         },
         payment_mode: 'UPI_DIGITAL',
         image_url: imagePreview,
-        notes: `AI Classified with ${(aiResult?.confidence || 95)}% confidence. Certified weighment locked at ${weightVal} kg.`
+        notes: `AI Classified with ${(aiResult?.confidence || 95)}% confidence. Certified weighment locked at ${weightVal} kg. Pickup Target: Scrapper Main Aggregation Hub.`
       });
 
       setActiveCreatedLot(newTx);
@@ -390,6 +497,35 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
     }
   };
 
+  const handleSyncOfflinePhotos = async () => {
+    setIsSyncingPhotos(true);
+    try {
+      const res = await offlinePhotoDb.syncAndPredictPending((idx, total, photo) => {
+        setSuccessToast(`Analyzing offline photo ${idx}/${total} with Gemini AI...`);
+      });
+      const updatedPhotos = await offlinePhotoDb.getAllPhotos();
+      setOfflinePhotos(updatedPhotos);
+
+      if (res.predicted > 0) {
+        setSuccessToast(`🌐 Network Restored: Predicted ${res.predicted} offline photo(s) using Gemini AI & added to your verified lots!`);
+        await loadData();
+        notifyUser({
+          title: lang === 'hi' ? 'ऑफ़लाइन फोटो एआई द्वारा प्रेडिक्ट हुए' : 'Offline Photos AI-Predicted & Synced',
+          message: `${res.predicted} photo(s) analyzed by Gemini AI and added to your verified lots targeting your Main Hub.`,
+          type: 'status'
+        });
+      } else if (res.failed > 0) {
+        setSuccessToast(`AI analysis completed with ${res.failed} error(s). Please try again.`);
+      } else {
+        setSuccessToast(`All offline photos have already been analyzed and converted.`);
+      }
+    } catch (err) {
+      console.error('Failed to sync offline photos:', err);
+    } finally {
+      setIsSyncingPhotos(false);
+    }
+  };
+
   const handleAcceptScaleWeight = async (lot: Transaction) => {
     try {
       const updated = await api.confirmLotWeight(lot.id, true);
@@ -436,9 +572,11 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
         estimated_weight: group.estimated_weight_kg,
         offered_rate_per_kg: group.estimated_rate_per_kg,
         collection_gps: {
-          latitude: currentCoords.latitude,
-          longitude: currentCoords.longitude,
-          address: `${user.location} (${currentCoords.label})`
+          latitude: scrapperMainHub.latitude,
+          longitude: scrapperMainHub.longitude,
+          address: scrapperMainHub.address,
+          hub_name: scrapperMainHub.hub_name,
+          is_main_hub: true
         },
         payment_mode: 'UPI_DIGITAL',
         image_url: imagePreview,
@@ -541,7 +679,31 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* Direct Scrapper Android APK Download Link */}
+            <a
+              href="/downloads/KabadiwalaConnect-Scrapper-v2.4.1.apk"
+              download="KabadiwalaConnect-Scrapper-v2.4.1.apk"
+              id="scrapper-download-apk-btn"
+              className="px-3.5 py-2 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 active:scale-95 text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer border border-emerald-300"
+              title="Download Android APK Installer (.apk) directly to your phone"
+            >
+              <Download className="w-4 h-4 text-emerald-700" />
+              <span>Download Scrapper App (APK)</span>
+            </a>
+
+            {/* Offline Photo Database Vault Button */}
+            <button
+              type="button"
+              id="scrapper-open-vault-btn"
+              onClick={() => setIsOfflineVaultModalOpen(true)}
+              className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border border-amber-500"
+              title="Open photos stored in separate offline database"
+            >
+              <Database className="w-4 h-4 text-slate-900" />
+              <span>Offline Vault ({offlinePhotos.filter(p => p.status === 'pending_prediction').length})</span>
+            </button>
+
             {isInstalled ? (
               <div className="px-3.5 py-2 rounded-xl bg-emerald-700/80 text-white text-xs font-bold flex items-center gap-1.5 border border-emerald-500 shadow-sm">
                 <CheckCircle2 className="w-4 h-4 text-emerald-300" />
@@ -551,11 +713,11 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAndroidModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 active:scale-95 text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                title="Add shortcut to Android home screen or install APK"
+                className="px-3.5 py-2 rounded-xl bg-emerald-900/60 text-white hover:bg-emerald-900 active:scale-95 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer border border-emerald-600/60"
+                title="PWA installation guide and APK package instructions"
               >
-                <Download className="w-4 h-4 text-emerald-700" />
-                <span>Install to Home Screen / APK</span>
+                <Smartphone className="w-4 h-4 text-emerald-300" />
+                <span>Install Guide</span>
               </button>
             )}
           </div>
@@ -563,21 +725,43 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
       </div>
 
       {/* Top Banner & Vernacular Header */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs">
+      <div className="bg-gradient-to-b from-slate-900/95 to-slate-950/95 p-5 sm:p-6 rounded-2xl border border-emerald-500/25 shadow-xl backdrop-blur-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 {t.appTitle}
               </h1>
               <button
                 type="button"
                 onClick={() => setIsAadhaarModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors cursor-pointer"
                 title="View Government of India Aadhaar & CPCB Registration ID"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Aadhaar Identity Card</span>
+              </button>
+
+              <button
+                type="button"
+                id="scrapper-open-household-lots-btn"
+                onClick={() => {
+                  setActiveMenuTab('household_lots');
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  activeMenuTab === 'household_lots'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-500/30'
+                }`}
+                title="View doorstep scrap requests from household citizens"
+              >
+                <Home className="w-3.5 h-3.5 text-blue-400" />
+                <span>Household Scrap Lots</span>
+                {householdPickups.filter(p => p.status === 'PENDING' || p.status === 'SCHEDULED').length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-500 text-white">
+                    {householdPickups.filter(p => p.status === 'PENDING' || p.status === 'SCHEDULED').length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -586,42 +770,42 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
                 onClick={() => {
                   setActiveMenuTab('complaints');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
                 title="File formal complaint or view grievance status"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
                 <span>{t.grievanceDesk}</span>
                 {complaints.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-200 text-rose-800">
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500/30 text-rose-300">
                     {complaints.length}
                   </span>
                 )}
               </button>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
               {t.appSubtitle}
             </p>
-            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-700">
-              <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200">
+            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+              <span className="font-bold text-white bg-slate-950 px-2.5 py-0.5 rounded-md border border-slate-800">
                 Collector: {user.name}
               </span>
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-600 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-300 flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>{user.location}</span>
               </span>
-              <span className="text-slate-400">•</span>
-              <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="text-slate-600">•</span>
+              <span className="inline-flex items-center gap-1 text-emerald-300 font-semibold bg-emerald-950/60 px-2.5 py-0.5 rounded-md border border-emerald-500/30">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>Aadhaar-Linked: {user.phone}</span>
               </span>
             </div>
           </div>
 
           {/* Quick Hub Presets for testing */}
-          <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
-            <span className="text-slate-500 text-[11px] font-medium flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-emerald-600" /> GPS Pin:
+          <div className="flex flex-wrap items-center gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-xs">
+            <span className="text-slate-400 text-[11px] font-medium flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-emerald-400" /> GPS Pin:
             </span>
             <button
               type="button"
@@ -630,8 +814,8 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 currentCoords.latitude === PRESET_HUBS.bengaluru.latitude
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
               }`}
             >
               Bengaluru
@@ -643,8 +827,8 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 currentCoords.latitude === PRESET_HUBS.delhi.latitude
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
               }`}
             >
               Delhi NCR
@@ -656,8 +840,8 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 currentCoords.latitude === PRESET_HUBS.chennai.latitude
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
               }`}
             >
               Chennai
@@ -666,7 +850,7 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               type="button"
               onClick={refreshLocation}
               disabled={isLocating}
-              className="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               title="Refresh GPS location"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
@@ -762,6 +946,10 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
               setSafetyCategory(aiResult?.category || selectedCategory);
               setIsSafetyModalOpen(true);
             }}
+            offlinePhotosCount={offlinePhotos.filter(p => p.status === 'pending_prediction').length}
+            onOpenOfflineVault={() => setIsOfflineVaultModalOpen(true)}
+            isOfflineActive={!navigator.onLine || simulateNoNetwork}
+            onSyncOfflinePhotos={handleSyncOfflinePhotos}
             lang={lang}
           />
         )}
@@ -805,6 +993,21 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
             onOpenChat={(rec, lot) => handleNavigateToChat(rec, lot)}
             onDownloadMonthlyStatement={handleDownloadMonthlyPdf}
             onNavigateToCapture={() => setActiveMenuTab("capture")}
+            onNavigateToHouseholdLots={() => setActiveMenuTab("household_lots")}
+            householdLotsCount={householdPickups.filter(p => p.status === 'PENDING' || p.status === 'SCHEDULED').length}
+          />
+        )}
+
+        {activeMenuTab === "household_lots" && (
+          <HouseholdPickupsModule
+            pickups={householdPickups}
+            scrapperUser={user}
+            onRefresh={loadData}
+            onOpenChat={(household) => {
+              onOpenChat(household);
+            }}
+            onNavigateToCapture={() => setActiveMenuTab("capture")}
+            lang={lang}
           />
         )}
 
@@ -882,6 +1085,25 @@ export const ScrapperDashboard: React.FC<ScrapperDashboardProps> = ({
       <AndroidAppModal
         isOpen={isAndroidModalOpen}
         onClose={() => setIsAndroidModalOpen(false)}
+      />
+
+      {/* Offline Photo Vault Modal */}
+      <OfflinePhotoVaultModal
+        isOpen={isOfflineVaultModalOpen}
+        onClose={() => setIsOfflineVaultModalOpen(false)}
+        photos={offlinePhotos}
+        onRefresh={async () => {
+          const list = await offlinePhotoDb.getAllPhotos();
+          setOfflinePhotos(list);
+        }}
+        onSyncAll={handleSyncOfflinePhotos}
+        isSyncing={isSyncingPhotos}
+        lang={lang}
+        simulateNoNetwork={simulateNoNetwork}
+        onToggleSimulateNoNetwork={() => setSimulateNoNetwork(prev => !prev)}
+        onViewLot={(lotRefId) => {
+          setActiveMenuTab('lots');
+        }}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import { AdminMasterControlBar, AdminActiveMode } from './components/admin/Admin
 import { ChatDrawer } from './components/ChatDrawer';
 import { GeoMapModal } from './components/common/GeoMapModal';
 import { NotificationToastContainer } from './components/common/NotificationToast';
+import { PendingVerificationDashboard } from './components/common/PendingVerificationDashboard';
 import { translations } from './translations';
 import {
   WifiOff, Compass, ShieldAlert, Scale, Package, UserCheck,
@@ -41,6 +42,27 @@ const DEFAULT_FALLBACK_RECYCLER: User = {
   phone: '+91 99001 22334',
   verified: true,
   cpcb_number: 'CPCB/EW/KAR/2024/7742'
+};
+
+const DEFAULT_FALLBACK_HOUSEHOLD: User = {
+  id: 'usr-household-1',
+  username: 'priya',
+  name: 'Priya Sharma (Household)',
+  role: 'household',
+  location: 'Indiranagar, Bengaluru, Karnataka',
+  phone: '+91 98450 77665',
+  verified: true
+};
+
+const DEFAULT_FALLBACK_ADMIN: User = {
+  id: 'usr-admin-1',
+  username: 'admin',
+  name: 'Dr. Ananya Sharma (CPCB Directorate)',
+  role: 'admin',
+  location: 'CPCB E-Waste Oversight Directorate, New Delhi',
+  phone: '+91 11 2230 7000',
+  verified: true,
+  cpcb_number: 'GOV-IN-CPCB-AUDITOR-01'
 };
 
 export default function App() {
@@ -163,6 +185,18 @@ export default function App() {
     localStorage.setItem('kc_vernacular_lang', newLang);
   };
 
+  const handleSwitchApp = (targetRole: 'household' | 'scrapper' | 'recycler' | 'admin') => {
+    if (targetRole === 'household') {
+      setCurrentUser(DEFAULT_FALLBACK_HOUSEHOLD);
+    } else if (targetRole === 'scrapper') {
+      setCurrentUser(DEFAULT_FALLBACK_SCRAPPER);
+    } else if (targetRole === 'recycler') {
+      setCurrentUser(DEFAULT_FALLBACK_RECYCLER);
+    } else if (targetRole === 'admin') {
+      setCurrentUser(DEFAULT_FALLBACK_ADMIN);
+    }
+  };
+
   const handleOpenChat = (
     target: { id: string; name: string; role: string; phone?: string },
     lot?: Transaction
@@ -179,6 +213,25 @@ export default function App() {
         onLoginSuccess={handleLoginSuccess}
         lang={lang}
         onLangChange={handleLangChange}
+      />
+    );
+  }
+
+  // If registered scrapper or recycler is pending first-time admin verification, show waiting dashboard
+  const isPendingVerification =
+    (currentUser.role === 'scrapper' || currentUser.role === 'recycler') &&
+    (!currentUser.verified || currentUser.status === 'Pending Verification' || currentUser.status === 'Pending Admin Verification' || (currentUser as any).approval_status === 'pending');
+
+  if (isPendingVerification) {
+    return (
+      <PendingVerificationDashboard
+        user={currentUser}
+        onUserApproved={(approvedUser) => {
+          setCurrentUser(approvedUser);
+          localStorage.setItem('kc_session_user', JSON.stringify(approvedUser));
+        }}
+        onLogout={handleLogout}
+        lang={lang}
       />
     );
   }
@@ -220,7 +273,11 @@ export default function App() {
   const foot = FOOTER_TEXTS[lang] || FOOTER_TEXTS.en;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative">
+      {/* Ambient background glows */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.07),rgba(255,255,255,0))] pointer-events-none z-0" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_100%,rgba(6,182,212,0.05),rgba(255,255,255,0))] pointer-events-none z-0" />
+
       {/* Local Notification System: Top of Screen Toast Banner */}
       <NotificationToastContainer
         currentUser={currentUser}
@@ -247,6 +304,7 @@ export default function App() {
         onOpenMap={() => setIsMapModalOpen(true)}
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
+        onSwitchApp={handleSwitchApp}
       />
 
       {/* Main Content View — Strictly Confined to Authorized Role */}
@@ -485,24 +543,24 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 ${
+      <footer className={`bg-slate-950/80 border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 backdrop-blur-md ${
         (currentUser.role === 'scrapper' || (currentUser.role === 'admin' && adminActiveMode === 'control_scrapper'))
           ? 'pb-24 md:pb-6'
           : 'pb-6'
       }`}>
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="font-semibold text-slate-700">{foot.brand}</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="font-semibold text-slate-300">{foot.brand}</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800">
               {currentUser.role === 'scrapper' ? '📱 Android Mobile App' : currentUser.role === 'recycler' ? '💻 Web Portal' : '🌐 Regulatory Web Desk'}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
             <span>{foot.cpcb}</span>
             <span>•</span>
             <span>{foot.rules}</span>
             <span>•</span>
-            <span className="text-emerald-700 font-medium">{foot.rbac}</span>
+            <span className="text-emerald-400 font-medium">{foot.rbac}</span>
           </div>
         </div>
       </footer>

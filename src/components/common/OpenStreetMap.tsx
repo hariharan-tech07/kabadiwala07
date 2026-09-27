@@ -1479,8 +1479,13 @@ export const OpenStreetMap: React.FC<OpenStreetMapProps> = ({
                     Collector: <strong>{selectedNode.data.scrapper_name}</strong> • Weight:{' '}
                     <strong className="text-slate-900">{selectedNode.data.estimated_weight} kg</strong>
                   </div>
-                  <div className="text-slate-500 truncate">
-                    Pickup: {selectedNode.data.collection_gps?.address || 'Collection GPS Point'}
+                  <div className="text-slate-700 truncate">
+                    <strong>Pickup Destination:</strong> {selectedNode.data.collection_gps?.hub_name || selectedNode.data.collection_gps?.address || 'Scrapper Main Aggregation Hub'}
+                  </div>
+                  <div className="pt-0.5">
+                    <span className="inline-block text-[10px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-200">
+                      📍 Registered Main Hub (Not Live Roving GPS)
+                    </span>
                   </div>
                   {selectedNode.distance !== undefined && (
                     <div className="text-amber-800 font-extrabold">

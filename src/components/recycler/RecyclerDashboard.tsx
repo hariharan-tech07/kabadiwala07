@@ -328,9 +328,9 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
         estimated_weight: 48,
         offered_rate_per_kg: rate,
         collection_gps: {
-          latitude: 13.0285,
-          longitude: 77.5192,
-          address: 'Peenya Scrap Yard, Gate 2'
+          latitude: 13.0315,
+          longitude: 77.5210,
+          address: 'Peenya Collection Hub & Aggregation Yard (Plot 14, Main Hub), Bengaluru'
         },
         payment_mode: 'UPI_DIGITAL',
         notes: 'Simulated high-yield lot for platform testing and weighment verification'
@@ -834,9 +834,12 @@ export const RecyclerDashboard: React.FC<RecyclerDashboardProps> = ({
                             </td>
                             <td className="py-3 px-3">
                               <div className="font-semibold text-slate-900">{tx.scrapper_name}</div>
-                              <div className="text-[11px] text-slate-500 truncate max-w-[140px]">
-                                {tx.collection_gps?.address || 'Peenya Hub'}
+                              <div className="text-[11px] text-slate-600 truncate max-w-[170px]" title={tx.collection_gps?.address || 'Scrapper Main Hub'}>
+                                {tx.collection_gps?.address ? tx.collection_gps.address.split('(')[0].trim() : 'Peenya Main Hub'}
                               </div>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-200 mt-0.5">
+                                📍 Main Hub (Not Live GPS)
+                              </span>
                             </td>
                             <td className="py-3 px-3">
                               <span className="font-semibold text-slate-900 block">{tx.category}</span>

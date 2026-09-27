@@ -294,44 +294,119 @@ export const AndroidAppModal: React.FC<AndroidAppModalProps> = ({ isOpen, onClos
             </div>
           )}
 
-          {/* Tab 3: Build APK / TWA / Google Play */}
+          {/* Tab 3: Direct Download APK / Android Package */}
           {activeTab === 'apk' && (
-            <div className="space-y-3">
-              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl text-xs text-blue-900 dark:text-blue-100">
-                <p className="font-semibold mb-1">📦 Want a standalone Google Play Store APK / AAB?</p>
-                <p className="text-blue-800 dark:text-blue-300 text-[11px]">
-                  You can generate a signed native Android APK or Google Play Bundle using Google's official <strong>Bubblewrap CLI</strong> or <strong>Capacitor</strong> in under 2 minutes.
-                </p>
-              </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-300 dark:border-emerald-700 rounded-xl text-emerald-950 dark:text-emerald-100">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                      <Download className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-extrabold text-sm text-emerald-950 dark:text-emerald-50">
+                        Direct Android APK Package Installer
+                      </h4>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                        Official standalone installer for Scrappers & Field Collectors
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-900">
+                    v2.4.1
+                  </span>
+                </div>
 
-              {/* Download Manifest */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={downloadTwaManifest}
-                  className="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                <div className="grid grid-cols-2 gap-2 text-[11px] p-2.5 bg-white/80 dark:bg-slate-900/60 rounded-lg border border-emerald-200/80 mb-3">
+                  <div>
+                    <span className="text-slate-500 block">Package Name:</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">in.cpcb.kabadiwalaconnect.scrapper</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Architecture:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Universal (ARM64 / ARMv7)</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Min SDK:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Android 8.0+ (Oreo to 15+)</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Offline Vault:</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300">IndexedDB Database Enabled</span>
+                  </div>
+                </div>
+
+                {/* Direct 1-Click APK Download Button */}
+                <a
+                  href="/downloads/KabadiwalaConnect-Scrapper-v2.4.1.apk"
+                  download="KabadiwalaConnect-Scrapper-v2.4.1.apk"
+                  id="direct-apk-modal-download-link"
+                  className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download twa-manifest.json</span>
-                </button>
+                  <span>Download KabadiwalaConnect-Scrapper-v2.4.1.apk</span>
+                </a>
               </div>
 
-              {/* CLI Command Box */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  1-Line Terminal Command to Build APK:
-                </label>
+              {/* 3-Step Sideload Installation Guide */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+                <h5 className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>How to Install on Android:</span>
+                </h5>
+                <ol className="list-decimal list-inside text-[11px] text-slate-600 dark:text-slate-300 space-y-1 pl-1">
+                  <li>Tap the green <strong>Download APK</strong> button above to save the installer.</li>
+                  <li>In Android Notification or Downloads folder, tap <strong>KabadiwalaConnect-Scrapper-v2.4.1.apk</strong>.</li>
+                  <li>Tap <strong>Install</strong>. If prompted with <em>"Install unknown apps"</em>, toggle <strong>Allow from this source</strong>.</li>
+                  <li>Open Kabadiwala Connect to access the offline camera vault and direct recycler hub dispatch!</li>
+                </ol>
+              </div>
+
+              {/* Android Parse Error Troubleshooting Card */}
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-xs">
+                <h5 className="font-bold text-amber-300 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  <span>Fix "There was a problem parsing the package" on Mobile:</span>
+                </h5>
+                <div className="text-[11px] text-slate-300 space-y-1.5 leading-relaxed">
+                  <p>
+                    <strong className="text-emerald-400">1. Instant 1-Tap Home Screen Install (Zero Parse Errors):</strong> On Android Chrome, tap the 3 dots (<span className="font-mono text-white bg-slate-800 px-1 py-0.2 rounded">⋮</span>) on top right and select <strong>"Install app"</strong> (or <em>"Add to Home screen"</em>). Google Chrome automatically installs the verified Android WebAPK with native camera access & offline storage!
+                  </p>
+                  <p>
+                    <strong className="text-slate-100">2. Enable Sideload Permission:</strong> Go to Android <em>Settings &rarr; Apps &rarr; Chrome (or Files) &rarr; Install unknown apps</em> &rarr; toggle <strong>Allow from this source</strong>.
+                  </p>
+                  <p>
+                    <strong className="text-slate-100">3. Android Version:</strong> Supported on Android 8.0 (Oreo) through Android 15+. Open using the native <em>Files by Google</em> app.
+                  </p>
+                </div>
+              </div>
+
+              {/* Developer / CLI info */}
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                    Alternative: Build Signed Play Store AAB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={downloadTwaManifest}
+                    className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>twa-manifest.json</span>
+                  </button>
+                </div>
                 <div className="relative">
-                  <pre className="bg-slate-900 text-emerald-400 p-3 rounded-xl text-[11px] font-mono overflow-x-auto select-all pr-12">
+                  <pre className="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-[10px] font-mono overflow-x-auto select-all pr-10">
                     {bubblewrapCommand}
                   </pre>
                   <button
                     type="button"
                     onClick={copyCommand}
-                    className="absolute right-2 top-2 p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                    className="absolute right-1.5 top-1.5 p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
                     title="Copy command"
                   >
-                    {copiedCmd ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copiedCmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>

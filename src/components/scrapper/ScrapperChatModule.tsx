@@ -278,6 +278,8 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
   const activeHousehold = householdsList.find(h => h.id === activeHouseholdId) || householdsList[0];
   const targetId = chatChannel === 'households' ? activeHousehold.id : activeRecycler.id;
 
+  const justSentRef = useRef(false);
+
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -292,7 +294,7 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
     const el = messagesContainerRef.current;
     if (!el) return;
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const nearBottom = distanceToBottom < 70;
+    const nearBottom = distanceToBottom < 100;
     isNearBottomRef.current = nearBottom;
     if (nearBottom) {
       setHasUnreadBelow(false);
@@ -342,6 +344,9 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
         scrollToBottom('auto');
         isFirstLoadRef.current = false;
       }
+    } else if (justSentRef.current) {
+      scrollToBottom('smooth');
+      justSentRef.current = false;
     } else if (isNearBottomRef.current) {
       scrollToBottom('smooth');
     }
@@ -357,6 +362,7 @@ export const ScrapperChatModule: React.FC<ScrapperChatModuleProps> = ({
     if (!text.trim()) return;
 
     setLoading(true);
+    justSentRef.current = true;
     try {
       const receiverName = chatChannel === 'households' ? activeHousehold.name : activeRecycler.facility_name;
       const newMsg = await api.sendChatMessage({

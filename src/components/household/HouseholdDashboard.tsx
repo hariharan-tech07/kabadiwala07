@@ -234,7 +234,12 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInputText, setChatInputText] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [hasChatUnreadBelow, setHasChatUnreadBelow] = useState(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isChatNearBottomRef = useRef<boolean>(true);
+  const isChatFirstLoadRef = useRef<boolean>(true);
+  const justSentMessageRef = useRef<boolean>(false);
 
   // Load Data
   const loadData = async () => {
@@ -264,6 +269,27 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
     }
   }, [scrappers]);
 
+  const handleChatScroll = () => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isNearBottom = distanceToBottom < 100;
+    isChatNearBottomRef.current = isNearBottom;
+    if (isNearBottom) {
+      setHasChatUnreadBelow(false);
+    }
+  };
+
+  const scrollToChatBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior
+    });
+    setHasChatUnreadBelow(false);
+  };
+
   // Fetch chat messages when activeChatScrapperId changes or tab is chat
   const fetchHouseholdChats = async () => {
     if (!activeChatScrapperId) return;
@@ -272,7 +298,21 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
         user_id: user.id,
         other_user_id: activeChatScrapperId
       });
-      setChatMessages(msgs);
+      setChatMessages((prev) => {
+        if (
+          prev.length === msgs.length &&
+          prev.length > 0 &&
+          prev[prev.length - 1]?.id === msgs[msgs.length - 1]?.id
+        ) {
+          return prev;
+        }
+        if (prev.length > 0 && msgs.length > prev.length) {
+          if (!isChatNearBottomRef.current) {
+            setHasChatUnreadBelow(true);
+          }
+        }
+        return msgs;
+      });
     } catch (err) {
       console.warn('Failed to load household chats:', err);
     }
@@ -288,14 +328,30 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
 
   useEffect(() => {
     if (currentTab === 'chat') {
-      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (isChatFirstLoadRef.current) {
+        if (chatMessages.length > 0) {
+          scrollToChatBottom('auto');
+          isChatFirstLoadRef.current = false;
+        }
+      } else if (justSentMessageRef.current) {
+        scrollToChatBottom('smooth');
+        justSentMessageRef.current = false;
+      } else if (isChatNearBottomRef.current) {
+        scrollToChatBottom('smooth');
+      }
     }
   }, [chatMessages, currentTab]);
+
+  useEffect(() => {
+    isChatFirstLoadRef.current = true;
+    setHasChatUnreadBelow(false);
+  }, [activeChatScrapperId]);
 
   const handleSendHouseholdMessage = async (textToSend?: string) => {
     const text = textToSend || chatInputText;
     if (!text.trim() || !activeChatScrapperId || chatSending) return;
     setChatSending(true);
+    justSentMessageRef.current = true;
     try {
       const activeScrapper = scrappers.find(s => s.id === activeChatScrapperId);
       const receiverName = activeScrapper?.name || 'Verified Kabadiwala';
@@ -309,6 +365,7 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
       });
       if (!textToSend) setChatInputText('');
       fetchHouseholdChats();
+      setTimeout(() => scrollToChatBottom('smooth'), 50);
     } catch (err) {
       console.warn('Failed to send chat message:', err);
       showToast('Could not send message. Please retry.');
@@ -987,7 +1044,22 @@ export const HouseholdDashboard: React.FC<HouseholdDashboardProps> = ({
               })()}
 
               {/* Message Feed */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40">
+              <div
+                ref={chatContainerRef}
+                onScroll={handleChatScroll}
+                className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40 relative"
+              >
+                {/* Floating jump to bottom chip if user scrolled up and new message arrives */}
+                {hasChatUnreadBelow && (
+                  <button
+                    type="button"
+                    onClick={() => scrollToChatBottom('smooth')}
+                    className="sticky bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full shadow-lg flex items-center gap-1.5 cursor-pointer animate-bounce"
+                  >
+                    <span>New messages below</span>
+                    <span>↓</span>
+                  </button>
+                )}
                 {chatMessages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">

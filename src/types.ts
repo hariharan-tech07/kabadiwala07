@@ -13,7 +13,11 @@ export interface User {
   token?: string;
   latitude?: number;
   longitude?: number;
-  status?: 'Active' | 'Pending Admin Verification' | 'Suspended';
+  status?: 'Active' | 'Pending Admin Verification' | 'Pending Verification' | 'Suspended';
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  application_docket?: string;
+  kyc_documents?: string[];
+  rejection_reason?: string;
   suspension_reason?: string;
   created_at?: string;
   entity_name?: string;

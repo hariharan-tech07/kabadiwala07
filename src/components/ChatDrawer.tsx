@@ -237,6 +237,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isFirstLoadRef = useRef(true);
   const isNearBottomRef = useRef(true);
+  const justSentRef = useRef(false);
 
   const lotRefId = lot?.lot_reference_id;
 
@@ -279,7 +280,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
     const el = messagesContainerRef.current;
     if (!el) return;
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const nearBottom = distanceToBottom < 70;
+    const nearBottom = distanceToBottom < 100;
     isNearBottomRef.current = nearBottom;
     if (nearBottom) {
       setHasUnreadBelow(false);
@@ -422,6 +423,9 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
           scrollToBottom('auto');
           isFirstLoadRef.current = false;
         }
+      } else if (justSentRef.current) {
+        scrollToBottom('smooth');
+        justSentRef.current = false;
       } else if (isNearBottomRef.current) {
         scrollToBottom('smooth');
       }
@@ -440,6 +444,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
     if (!text.trim()) return;
 
     setLoading(true);
+    justSentRef.current = true;
     try {
       const newMsg = await api.sendChatMessage({
         lot_reference_id: lotRefId,

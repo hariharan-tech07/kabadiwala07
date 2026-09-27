@@ -746,6 +746,26 @@ export const api = {
     return data.user;
   },
 
+  async approveUser(userId: string): Promise<User> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to approve user');
+    const data = await res.json();
+    return data.user;
+  },
+
+  async rejectUser(userId: string): Promise<User> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to reject user');
+    const data = await res.json();
+    return data.user;
+  },
+
   // Price History
   async getPriceHistory(): Promise<PriceHistory[]> {
     try {
@@ -1248,6 +1268,38 @@ export const api = {
   async getHouseholdScrappers(): Promise<Array<User & { rating?: number; vehicle?: string; pickups_completed?: number; operating_hours?: string; service_radius_km?: number }>> {
     const res = await fetch(`${API_BASE}/api/household/scrappers`);
     if (!res.ok) throw new Error('Failed to fetch nearby scrappers');
+    return await res.json();
+  },
+
+  // User Verification & Status Checking
+  async checkUserStatus(userId: string): Promise<{ user: User; is_verified: boolean; approval_status: string }> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/status`);
+    if (!res.ok) throw new Error('Failed to check user status');
+    return await res.json();
+  },
+
+  async getPendingVerifications(): Promise<{ total: number; users: User[] }> {
+    const res = await fetch(`${API_BASE}/api/admin/pending-verifications`);
+    if (!res.ok) throw new Error('Failed to fetch pending verifications');
+    return await res.json();
+  },
+
+  async approveUser(userId: string): Promise<{ success: boolean; message: string; user: User }> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to approve user');
+    return await res.json();
+  },
+
+  async rejectUser(userId: string, reason?: string): Promise<{ success: boolean; message: string; user: User }> {
+    const res = await fetch(`${API_BASE}/api/users/${userId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    if (!res.ok) throw new Error('Failed to reject user');
     return await res.json();
   }
 };

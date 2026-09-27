@@ -3,7 +3,7 @@ import { Material, AIPredictionResult, Transaction, VernacularLang } from '../..
 import {
   Camera, Upload, Sparkles, Scale, IndianRupee, CheckCircle2,
   AlertTriangle, RefreshCw, ArrowRight, Lock, Check, ShieldCheck,
-  Eye, Zap, Layers, Info, Volume2
+  Eye, Zap, Layers, Info, Volume2, Database, WifiOff
 } from 'lucide-react';
 import { DeviceCameraModal } from '../common/DeviceCameraModal';
 
@@ -31,6 +31,10 @@ interface ImageCaptureWeightModuleProps {
   onNavigateToChat: () => void;
   onReanalyze?: () => void;
   onOpenSafetyGuidance?: () => void;
+  offlinePhotosCount?: number;
+  onOpenOfflineVault?: () => void;
+  isOfflineActive?: boolean;
+  onSyncOfflinePhotos?: () => Promise<void>;
   lang?: VernacularLang;
 }
 
@@ -271,6 +275,10 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
   onNavigateToChat,
   onReanalyze,
   onOpenSafetyGuidance,
+  offlinePhotosCount = 0,
+  onOpenOfflineVault,
+  isOfflineActive = false,
+  onSyncOfflinePhotos,
   lang = 'en'
 }) => {
   const tCap = CAPTURE_TEXTS[lang] || CAPTURE_TEXTS.en;
@@ -383,6 +391,16 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
+            onClick={onOpenOfflineVault}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs border border-amber-400"
+            title="View photos stored in separate offline database"
+          >
+            <Database className="w-4 h-4" />
+            <span>Offline Vault {offlinePhotosCount > 0 ? `(${offlinePhotosCount})` : ''}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsDeviceCameraOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
             title="Open device camera (mobile rear camera or laptop webcam)"
@@ -401,6 +419,53 @@ export const ImageCaptureWeightModule: React.FC<ImageCaptureWeightModuleProps> =
           </button>
         </div>
       </div>
+
+      {/* Offline Photo Storage Database Status Banner */}
+      {(offlinePhotosCount > 0 || isOfflineActive) && (
+        <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-bold shadow-2xs">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs sm:text-sm font-black text-amber-950 flex items-center gap-2 flex-wrap">
+                <span>Separate Offline Photo Database Active</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
+                  {offlinePhotosCount} Photo(s) in Vault
+                </span>
+                {isOfflineActive && (
+                  <span className="px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 text-[10px] font-bold">
+                    No Network Mode
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] sm:text-xs text-amber-800 mt-0.5">
+                Photos taken in remote collection yards without network are stored securely in the offline database. Once network is available, Gemini Vision auto-predicts grade & fair payout and converts them into official lots.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {onSyncOfflinePhotos && (
+              <button
+                type="button"
+                onClick={onSyncOfflinePhotos}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sync & Predict Now</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenOfflineVault}
+              className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 hover:bg-amber-100 text-amber-950 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              Open Vault ({offlinePhotosCount})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Broadcast Success Notice */}
       {broadcastedSuccess && (

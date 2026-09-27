@@ -933,7 +933,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onLoginSuccess, lang = 'en
         password: recPassword.trim(),
         role: 'recycler',
         phone: '+91 80 2839 4400',
-        verified: true
+        verified: false
       });
       onLoginSuccess(res.user);
     } catch (err: any) {

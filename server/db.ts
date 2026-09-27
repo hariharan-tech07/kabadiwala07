@@ -214,6 +214,23 @@ const INITIAL_USERS: (User & { password?: string })[] = [
     created_at: '2026-08-20T09:00:00Z'
   },
   {
+    id: 'usr-scrapper-pending-1',
+    username: 'arun',
+    password: 'password123',
+    name: 'Arun Yadav',
+    role: 'scrapper',
+    location: 'Yeshwanthpur Industrial Suburb, Bengaluru, Karnataka',
+    phone: '+91 98765 43210',
+    verified: false,
+    aadhaar_last4: '9231',
+    latitude: 13.0210,
+    longitude: 77.5380,
+    status: 'Pending Verification',
+    approval_status: 'pending',
+    application_docket: 'CPCB-REG-2026-AY8821',
+    created_at: '2026-09-26T10:30:00Z'
+  },
+  {
     id: 'usr-recycler-pending-1',
     username: 'sahyadrirecycling',
     password: 'password123',
@@ -225,7 +242,9 @@ const INITIAL_USERS: (User & { password?: string })[] = [
     cpcb_number: 'MPCB/EW/PUN/2025/9012',
     latitude: 18.6298,
     longitude: 73.7997,
-    status: 'Pending Admin Verification',
+    status: 'Pending Verification',
+    approval_status: 'pending',
+    application_docket: 'CPCB-REG-2026-SR9012',
     created_at: '2026-09-02T15:20:00Z'
   },
   {
@@ -307,6 +326,82 @@ const INITIAL_HOUSEHOLD_PICKUPS: HouseholdPickupRequest[] = [
     payment_mode: 'UPI',
     notes: 'Ramesh confirmed pickup for Sunday afternoon.',
     created_at: '2026-09-25T14:30:00Z'
+  },
+  {
+    id: 'hh-pickup-103',
+    household_id: 'usr-household-2',
+    household_name: 'Ananya Deshmukh (Citizen)',
+    household_phone: '+91 98201 44552',
+    household_address: 'House 14, 5th Main, Koramangala 4th Block, Bengaluru',
+    household_gps: { latitude: 12.9352, longitude: 77.6245 },
+    category: 'CRT Glass & Monitors',
+    items_description: '2 Old heavy Samsung CRT monitors, 1 Broken Epson Inkjet printer, 4 mouse units, discarded PC cables',
+    estimated_weight_kg: 24,
+    offered_rate_per_kg: 28,
+    pickup_date: '2026-09-27',
+    preferred_time_slot: 'Morning (11:00 AM - 2:00 PM)',
+    status: 'PENDING',
+    scrapper_resale_status: 'COLLECTED_AT_DOORSTEP',
+    payment_mode: 'UPI',
+    notes: 'Items stored on ground floor parking. Please bring digital weigh scale.',
+    created_at: '2026-09-26T18:00:00Z'
+  },
+  {
+    id: 'hh-pickup-104',
+    household_id: 'usr-household-3',
+    household_name: 'Rajesh Varma (Villa Resident)',
+    household_phone: '+91 98452 99118',
+    household_address: 'Villa 8B, Rainbow Woods, Whitefield, Bengaluru',
+    household_gps: { latitude: 12.9698, longitude: 77.7500 },
+    category: 'Copper Wires/Cables',
+    items_description: 'Old house electrical renovation bundle, 3 ceiling fan copper stators, thick earthing cables, discarded brass valves',
+    estimated_weight_kg: 16.5,
+    offered_rate_per_kg: 590,
+    pickup_date: '2026-09-28',
+    preferred_time_slot: 'Morning (9:00 AM - 12:00 PM)',
+    status: 'PENDING',
+    scrapper_resale_status: 'COLLECTED_AT_DOORSTEP',
+    payment_mode: 'UPI',
+    notes: 'Clean stripped copper cables, ready in carton boxes.',
+    created_at: '2026-09-27T07:15:00Z'
+  },
+  {
+    id: 'hh-pickup-105',
+    household_id: 'usr-household-4',
+    household_name: 'Sunita Patel (Apartment Citizen)',
+    household_phone: '+91 97234 11099',
+    household_address: 'Flat 303, Sunrise Heights, HSR Layout Sector 2, Bengaluru',
+    household_gps: { latitude: 12.9121, longitude: 77.6446 },
+    category: 'Lead/Li-ion Batteries',
+    items_description: '1 Discarded luminous Inverter Lead battery (150Ah dead cell), 2 UPS backup batteries, 4 swollen laptop batteries',
+    estimated_weight_kg: 38,
+    offered_rate_per_kg: 125,
+    pickup_date: '2026-09-27',
+    preferred_time_slot: 'Afternoon (3:00 PM - 6:00 PM)',
+    status: 'PENDING',
+    scrapper_resale_status: 'COLLECTED_AT_DOORSTEP',
+    payment_mode: 'UPI',
+    notes: 'Heavy battery. Please wear acid-safe gloves as per safety guidelines.',
+    created_at: '2026-09-27T06:30:00Z'
+  },
+  {
+    id: 'hh-pickup-106',
+    household_id: 'usr-household-5',
+    household_name: 'Vikramaditya Rao',
+    household_phone: '+91 99800 66221',
+    household_address: 'Plot 112, 12th Cross, Malleshwaram, Bengaluru',
+    household_gps: { latitude: 13.0068, longitude: 77.5684 },
+    category: 'Home Appliances & Broken Electronics',
+    items_description: 'Old Whirlpool washing machine motor, 1 burnt microwave transformer, brass tap fittings, iron scrap brackets',
+    estimated_weight_kg: 31,
+    offered_rate_per_kg: 52,
+    pickup_date: '2026-09-28',
+    preferred_time_slot: 'Morning (9:30 AM - 1:00 PM)',
+    status: 'SCHEDULED',
+    scrapper_resale_status: 'COLLECTED_AT_DOORSTEP',
+    payment_mode: 'UPI',
+    notes: 'Doorstep pickup confirmed. Call 15 mins prior to arrival.',
+    created_at: '2026-09-27T08:00:00Z'
   }
 ];
 
@@ -1070,6 +1165,13 @@ class DatabaseStore {
           }
         });
 
+        const household_pickups: HouseholdPickupRequest[] = parsed.household_pickups || [];
+        INITIAL_HOUSEHOLD_PICKUPS.forEach(ih => {
+          if (!household_pickups.some(h => h.id === ih.id)) {
+            household_pickups.push({ ...ih });
+          }
+        });
+
         return {
           users,
           materials: parsed.materials || INITIAL_MATERIALS,
@@ -1080,7 +1182,7 @@ class DatabaseStore {
           complaints: parsed.complaints || INITIAL_COMPLAINTS,
           legal_cases: parsed.legal_cases || INITIAL_LEGAL_CASES,
           audit_logs: parsed.audit_logs || INITIAL_AUDIT_LOGS,
-          household_pickups: parsed.household_pickups || INITIAL_HOUSEHOLD_PICKUPS
+          household_pickups
         };
       }
     } catch (err) {
@@ -1245,7 +1347,11 @@ class DatabaseStore {
     }
     return this.data.household_pickups.filter(p => {
       if (householdId && p.household_id !== householdId) return false;
-      if (scrapperId && p.scrapper_id !== scrapperId) return false;
+      if (scrapperId) {
+        const isAssigned = p.scrapper_id === scrapperId;
+        const isOpenMarket = !p.scrapper_id || p.status === 'PENDING' || p.status === 'SCHEDULED';
+        if (!isAssigned && !isOpenMarket) return false;
+      }
       return true;
     });
   }
@@ -1549,6 +1655,14 @@ class DatabaseStore {
         ids.push('rec-2', 'usr-recycler-2', 'greenmetal');
       } else if (id === 'rec-3' || id === 'usr-recycler-3' || id === 'chennaicircular') {
         ids.push('rec-3', 'usr-recycler-3', 'chennaicircular');
+      } else if (id === 'usr-scrapper-1' || id === 'ramesh') {
+        ids.push('usr-scrapper-1', 'ramesh');
+      } else if (id === 'usr-scrapper-2' || id === 'suresh') {
+        ids.push('usr-scrapper-2', 'suresh');
+      } else if (id === 'usr-scrapper-3' || id === 'anand') {
+        ids.push('usr-scrapper-3', 'anand');
+      } else if (id === 'usr-household-1' || id === 'priya') {
+        ids.push('usr-household-1', 'priya');
       }
       return ids;
     };

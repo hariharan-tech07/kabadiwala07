@@ -47,6 +47,17 @@ app.get('/api/database/status', (req, res) => {
   });
 });
 
+// Direct Android APK package download route for scrapper app
+app.get('/downloads/:filename', (req, res) => {
+  const filePath = path.join(process.cwd(), 'public', 'downloads', req.params.filename);
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+    return res.sendFile(filePath);
+  }
+  res.status(404).json({ error: 'Download package not found' });
+});
+
 // OTP Store in memory for verification
 const activeOtps = new Map<string, { otp: string; expiresAt: number }>();
 
@@ -155,11 +166,12 @@ app.post('/api/auth/register-mobile', (req, res) => {
     role: 'scrapper' as const,
     location: location || 'Peenya Industrial Area, Bengaluru, Karnataka',
     phone: `+91 ${clean}`,
-    verified: true,
+    verified: false,
     aadhaar_last4: aadhaar_last4 || '8821',
     latitude: 13.0315 + (Math.random() - 0.5) * 0.02,
     longitude: 77.5210 + (Math.random() - 0.5) * 0.02,
-    status: 'Active' as const,
+    status: 'Pending Verification' as any,
+    application_docket: `CPCB-REG-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
     created_at: new Date().toISOString()
   };
 
@@ -307,11 +319,12 @@ app.post('/api/auth/scrapper-register', (req, res) => {
     role: 'scrapper' as const,
     location: effectiveLocation,
     phone: `+91 ${clean}`,
-    verified: true,
+    verified: false,
     aadhaar_last4: aadhaar_last4 || clean.slice(-4),
     latitude: 13.0315 + (Math.random() - 0.5) * 0.02,
     longitude: 77.5210 + (Math.random() - 0.5) * 0.02,
-    status: 'Active' as const,
+    status: 'Pending Verification' as any,
+    application_docket: `CPCB-REG-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
     created_at: new Date().toISOString()
   });
 
@@ -504,6 +517,8 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(409).json({ error: 'Username already taken. Please choose another or login.' });
   }
 
+  const isAutoVerified = role === 'household' || role === 'admin';
+
   const newUser = {
     id: `usr-${role}-${Date.now()}`,
     username,
@@ -512,7 +527,9 @@ app.post('/api/auth/register', (req, res) => {
     role,
     location: location || 'India',
     phone: phone || '+91 98000 00000',
-    verified: role === 'scrapper' ? (verified || false) : true,
+    verified: isAutoVerified ? true : false,
+    status: (isAutoVerified ? 'Active' : 'Pending Verification') as any,
+    application_docket: `CPCB-REG-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
     aadhaar_last4: role === 'scrapper' ? (aadhaar_last4 || '1234') : undefined,
     cpcb_number: role === 'recycler' ? (cpcb_number || `CPCB/REG/2026/${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
     entity_name: role === 'recycler' ? (entity_name || name) : undefined
@@ -530,7 +547,7 @@ app.post('/api/auth/register', (req, res) => {
       latitude: 12.9716 + (Math.random() - 0.5) * 0.1,
       longitude: 77.5946 + (Math.random() - 0.5) * 0.1,
       cpcb_auth_number: created.cpcb_number || 'CPCB/EW/2026/PENDING',
-      is_authorized: true,
+      is_authorized: false,
       offered_rates_json: {
         'PCB (Printed Circuit Boards)': 350,
         'Copper Wires/Cables': 590,
@@ -1067,6 +1084,110 @@ app.patch('/api/admin/users/:id/verification', (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
   res.json({ message: 'User verification status updated', user: updated });
+});
+
+app.get('/api/users/:id/status', (req, res) => {
+  const { id } = req.params;
+  const user = db.findUserById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  const { password, ...safeUser } = user as any;
+  res.json({
+    user: safeUser,
+    is_verified: !!safeUser.verified && safeUser.status === 'Active',
+    approval_status: safeUser.approval_status || (safeUser.verified ? 'approved' : 'pending')
+  });
+});
+
+app.get('/api/admin/pending-verifications', (req, res) => {
+  const allUsers = db.getUsers();
+  const pending = allUsers.filter(u => 
+    (u.role === 'scrapper' || u.role === 'recycler') &&
+    (!u.verified || u.status === 'Pending Verification' || u.status === 'Pending Admin Verification' || (u as any).approval_status === 'pending')
+  );
+  res.json({
+    total: pending.length,
+    users: pending
+  });
+});
+
+app.post('/api/users/:id/approve', (req, res) => {
+  const { id } = req.params;
+  const user = db.findUserById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  user.verified = true;
+  user.status = 'Active';
+  (user as any).approval_status = 'approved';
+  (user as any).approved_at = new Date().toISOString();
+  db.updateUser(id, user);
+
+  // If recycler, also activate facility
+  if (user.role === 'recycler') {
+    const facilities = db.getRecyclers();
+    const facility = facilities.find(f => f.user_id === user.id || f.facility_name === user.name);
+    if (facility) {
+      facility.is_authorized = true;
+      db.saveToDisk();
+    }
+  }
+
+  // Create audit log
+  try {
+    db.createAuditLog({
+      action: 'USER_REGISTRATION_APPROVED',
+      entity_type: user.role === 'recycler' ? 'RECYCLER' : 'SCRAPPER',
+      entity_id: user.id,
+      actor_name: 'Dr. Ananya Sharma (CPCB Officer)',
+      notes: `Registration approved and commercial authorization granted for ${user.name} (${user.role.toUpperCase()}). Docket: ${(user as any).application_docket || 'CPCB-REG-2026'}`
+    });
+  } catch (e) {
+    // Continue
+  }
+
+  const { password, ...safeUser } = user as any;
+  res.json({
+    success: true,
+    message: `${user.name} (${user.role.toUpperCase()}) approved and activated by CPCB Directorate.`,
+    user: safeUser
+  });
+});
+
+app.post('/api/users/:id/reject', (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  const user = db.findUserById(id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  user.verified = false;
+  user.status = 'Suspended';
+  (user as any).approval_status = 'rejected';
+  (user as any).rejection_reason = reason || 'Incomplete statutory documentation or unverified facility physical inspection.';
+  db.updateUser(id, user);
+
+  try {
+    db.createAuditLog({
+      action: 'USER_REGISTRATION_REJECTED',
+      entity_type: user.role === 'recycler' ? 'RECYCLER' : 'SCRAPPER',
+      entity_id: user.id,
+      actor_name: 'Dr. Ananya Sharma (CPCB Officer)',
+      notes: `Registration rejected for ${user.name}: ${(user as any).rejection_reason}`
+    });
+  } catch (e) {
+    // Continue
+  }
+
+  const { password, ...safeUser } = user as any;
+  res.json({
+    success: true,
+    message: `${user.name} application rejected by CPCB Directorate.`,
+    user: safeUser
+  });
 });
 
 app.delete('/api/admin/users/:id', (req, res) => {
